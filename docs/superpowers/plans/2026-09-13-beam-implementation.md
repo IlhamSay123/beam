@@ -1969,7 +1969,7 @@ git commit -m "feat: animate pill and show toast on inbound receive"
 
 **Interfaces:**
 - Consumes: `BeamServerOptions` (Task 2, via `App.Options`).
-- Produces: `class MdnsAdvertiser` with `void Start(int port)` / `void Stop()`; `PairingWindow` displays a QR code encoding `beam-pc.local:<port>:<token>`.
+- Produces: `class MdnsAdvertiser` with `void Start(int port)` / `void Stop()`; `PairingWindow` displays a QR code encoding the PWA's URL (`http://<hostname>:<port>/app/`) plus the host/port/token as plain text below it for manual Shortcut setup.
 
 - [ ] **Step 1: Add QRCoder and Makaretu.Dns packages**
 
