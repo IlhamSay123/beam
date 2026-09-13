@@ -28,6 +28,7 @@ public static class BeamServerHost
 
         app.UseMiddleware<TokenAuthMiddleware>();
         app.MapReceiveEndpoints();
+        app.MapOutboxEndpoints();
 
         // Serves wwwroot/index.html (and app.js/styles.css/manifest) under
         // /app once Task 13 adds content there. UseDefaultFiles must be
