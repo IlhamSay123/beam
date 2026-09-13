@@ -19,9 +19,19 @@ public partial class PillWindow : Window
     {
         var storyboard = (Storyboard)FindResource(_isExpanded ? "CollapseStoryboard" : "ExpandStoryboard");
         _isExpanded = !_isExpanded;
+
+        if (_isExpanded)
+        {
+            ContentHost.Children.Clear();
+            ContentHost.Children.Add(new ExpandedPanel());
+        }
+
         storyboard.Begin(this);
-        // ContentHost stays empty until Task 10 introduces ExpandedPanel and
-        // wires it in here — this task only proves the resize/expand shell.
+
+        if (!_isExpanded)
+        {
+            ContentHost.Children.Clear();
+        }
     }
 
     private void RootBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
