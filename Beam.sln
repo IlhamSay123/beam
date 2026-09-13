@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{89C5BFF1
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beam.Server.Tests", "tests\Beam.Server.Tests\Beam.Server.Tests.csproj", "{30D257EB-E2E4-43E5-B081-8D3C5A980053}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beam.App", "src\Beam.App\Beam.App.csproj", "{BBE79AC4-0E2D-49E8-9715-9F0468C05283}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{30D257EB-E2E4-43E5-B081-8D3C5A980053}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30D257EB-E2E4-43E5-B081-8D3C5A980053}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30D257EB-E2E4-43E5-B081-8D3C5A980053}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BBE79AC4-0E2D-49E8-9715-9F0468C05283}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BBE79AC4-0E2D-49E8-9715-9F0468C05283}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BBE79AC4-0E2D-49E8-9715-9F0468C05283}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BBE79AC4-0E2D-49E8-9715-9F0468C05283}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F0AA6B97-CE77-420B-9766-8FD33DD7392E} = {93CEA683-4239-4302-80EF-5EC8E700E1A8}
 		{30D257EB-E2E4-43E5-B081-8D3C5A980053} = {89C5BFF1-E62B-4A98-9481-980FB31E1661}
+		{BBE79AC4-0E2D-49E8-9715-9F0468C05283} = {93CEA683-4239-4302-80EF-5EC8E700E1A8}
 	EndGlobalSection
 EndGlobal
