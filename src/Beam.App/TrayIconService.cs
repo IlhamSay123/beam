@@ -7,6 +7,7 @@ namespace Beam.App;
 public class TrayIconService : IDisposable
 {
     private TaskbarIcon? _taskbarIcon;
+    private PillWindow? _pillWindow;
 
     public void Initialize()
     {
@@ -33,7 +34,14 @@ public class TrayIconService : IDisposable
 
     private void TogglePill()
     {
-        // Task 9 replaces this with real PillWindow show/hide logic.
+        _pillWindow ??= new PillWindow();
+
+        if (!_pillWindow.IsVisible)
+        {
+            _pillWindow.Show();
+        }
+
+        _pillWindow.ToggleExpanded();
     }
 
     public void Dispose()
