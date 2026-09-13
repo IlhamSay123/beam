@@ -88,4 +88,21 @@ public class HistoryIndexTests
         Assert.Single(remaining);
         Assert.Equal("new", remaining[0].Id);
     }
+
+    [Fact]
+    public void Prune_WithTighterLimitsThanAddDefaults_RemovesExtraItems()
+    {
+        var index = new HistoryIndex(TempIndexPath());
+        // All recent timestamps, so Add's own default auto-prune (50 items / 7 days) never removes any of these.
+        index.Add(MakeItem("1", "inbound", ts: DateTimeOffset.UtcNow.AddMinutes(-3)));
+        index.Add(MakeItem("2", "inbound", ts: DateTimeOffset.UtcNow.AddMinutes(-2)));
+        index.Add(MakeItem("3", "inbound", ts: DateTimeOffset.UtcNow.AddMinutes(-1)));
+
+        // Explicitly prune down to 1 item — stricter than Add's default of 50 — proving Prune() itself does the work.
+        index.Prune(maxItems: 1, maxAge: TimeSpan.FromDays(7));
+
+        var remaining = index.List();
+        Assert.Single(remaining);
+        Assert.Equal("3", remaining[0].Id); // most recent survives
+    }
 }
