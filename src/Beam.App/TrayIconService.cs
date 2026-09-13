@@ -28,7 +28,8 @@ public class TrayIconService : IDisposable
         var pairItem = new MenuItem { Header = "Show Pairing QR" };
         pairItem.Click += (_, _) =>
         {
-            var window = new PairingWindow("beam-pc.local", App.Options.Port, App.Options.ExpectedToken);
+            var hostname = App.Advertiser.HostName ?? "beam-pc.local";
+            var window = new PairingWindow(hostname, App.Options.Port, App.Options.ExpectedToken);
             window.Show();
         };
         menu.Items.Add(pairItem);
