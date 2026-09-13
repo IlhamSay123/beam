@@ -1596,19 +1596,9 @@ public partial class PillWindow : Window
     {
         var storyboard = (Storyboard)FindResource(_isExpanded ? "CollapseStoryboard" : "ExpandStoryboard");
         _isExpanded = !_isExpanded;
-
-        if (_isExpanded)
-        {
-            ContentHost.Children.Clear();
-            ContentHost.Children.Add(new ExpandedPanel());
-        }
-
         storyboard.Begin(this);
-
-        if (!_isExpanded)
-        {
-            ContentHost.Children.Clear();
-        }
+        // ContentHost stays empty until Task 10 introduces ExpandedPanel and
+        // wires it in here — this task only proves the resize/expand shell.
     }
 
     private void RootBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1660,6 +1650,7 @@ git commit -m "feat: add floating pill widget with expand/collapse animation"
 - Create: `src/Beam.App/HistoryViewModel.cs`
 - Create: `src/Beam.App/ExpandedPanel.xaml`
 - Create: `src/Beam.App/ExpandedPanel.xaml.cs`
+- Modify: `src/Beam.App/PillWindow.xaml.cs` (populate `ContentHost` with `ExpandedPanel` now that it exists)
 
 **Interfaces:**
 - Consumes: `HistoryIndex`, `ItemStore`, `OutboxQueue` (Tasks 3-5) via `App.ServerApp.Services`.
@@ -1814,17 +1805,43 @@ public partial class ExpandedPanel : UserControl
 }
 ```
 
-Add `using Microsoft.Extensions.DependencyInjection;` to both files that call `GetRequiredService`.
+Add `using Microsoft.Extensions.DependencyInjection;` to `ExpandedPanel.xaml.cs` (needed for `GetRequiredService`).
 
-- [ ] **Step 4: Manually verify**
+- [ ] **Step 4: Wire ExpandedPanel into the pill's expand/collapse**
+
+Now that `ExpandedPanel` exists, update `PillWindow.xaml.cs`'s `ToggleExpanded()` to populate and clear it:
+
+```csharp
+// src/Beam.App/PillWindow.xaml.cs — replace ToggleExpanded()
+public void ToggleExpanded()
+{
+    var storyboard = (Storyboard)FindResource(_isExpanded ? "CollapseStoryboard" : "ExpandStoryboard");
+    _isExpanded = !_isExpanded;
+
+    if (_isExpanded)
+    {
+        ContentHost.Children.Clear();
+        ContentHost.Children.Add(new ExpandedPanel());
+    }
+
+    storyboard.Begin(this);
+
+    if (!_isExpanded)
+    {
+        ContentHost.Children.Clear();
+    }
+}
+```
+
+- [ ] **Step 5: Manually verify**
 
 Run: `dotnet run --project src/Beam.App/Beam.App.csproj`
 Expected: expand the pill, drag a file from Explorer onto the drop zone — it appears in the history list labeled "outbound" and a copy lands in `Documents\Beam\Outbox`. Double-clicking a file entry opens Explorer to it; double-clicking a text entry (add one via a quick manual `OutboxQueue.QueueText` test call, or wait for Task 12's hotkey) copies it to the clipboard.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/Beam.App/HistoryViewModel.cs src/Beam.App/ExpandedPanel.xaml src/Beam.App/ExpandedPanel.xaml.cs
+git add src/Beam.App/HistoryViewModel.cs src/Beam.App/ExpandedPanel.xaml src/Beam.App/ExpandedPanel.xaml.cs src/Beam.App/PillWindow.xaml.cs
 git commit -m "feat: add history list and drag-and-drop send to ExpandedPanel"
 ```
 
