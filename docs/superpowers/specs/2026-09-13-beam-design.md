@@ -50,7 +50,7 @@ No shared code between the two; they only share the HTTP contract below.
 
 ## HTTP Contract (PC server, LAN-only)
 
-- `POST /receive` — multipart body (file blob(s), or a plain text field). Header: `X-Beam-Token`. Used by the Shortcut. Returns 200 + item id.
+- `POST /receive` — multipart body, one or more file blobs and/or a plain text field in a single request. Header: `X-Beam-Token`. Used by the Shortcut. Returns 200 + one item id per part received.
 - `GET /outbox` — returns unread items PC→phone has queued (metadata: id, name, type, timestamp). Used by the PWA on open/poll.
 - `GET /outbox/{id}/content` — downloads a specific outbox item's bytes.
 - `POST /outbox/{id}/ack` — marks an item as delivered/read, removing it from the "unread" badge count.
@@ -58,15 +58,15 @@ No shared code between the two; they only share the HTTP contract below.
 
 ## Data Flow
 
-**Phone → PC:** User shares from any app (Photos, Files, Safari, etc.) → taps "Send to Beam" in Share Sheet → Shortcut POSTs to `/receive` → PC server writes to `Inbox/` + appends to history index → floating pill animates (brief pop/glow) + Windows toast → item appears at top of expanded history list.
+**Phone → PC:** User shares from any app (Photos, Files, Safari, etc.) → taps "Send to Beam" in Share Sheet → Shortcut POSTs to `/receive`. Selecting multiple photos/files before tapping Share sends them as one batch in a single request, not one send per file. PC server writes each part to `Inbox/` + appends to history index → floating pill animates (brief pop/glow) + Windows toast (one toast for the whole batch, e.g. "3 items received") → items appear at top of expanded history list.
 
-**PC → Phone:** User drags a file onto the floating pill, or clicks "Send to phone" in the expanded view (also works for arbitrary clipboard text via a hotkey) → PC server writes to `Outbox/`, marks unread → next time the PWA is opened it calls `/outbox`, shows new items with a subtle entrance animation, and downloads on tap. If Web Push is added later, the phone gets a notification without needing to open the PWA first.
+**PC → Phone:** User drags one or more files onto the floating pill, or clicks "Send to phone" in the expanded view (also works for arbitrary clipboard text via a hotkey) → PC server writes to `Outbox/`, marks unread → next time the PWA is opened it calls `/outbox`, shows new items with a subtle entrance animation. Files download on tap; text items get a "Copy" action that puts the text directly on the phone's clipboard instead of downloading a `.txt` file. If Web Push is added later, the phone gets a notification without needing to open the PWA first.
 
 ## Storage & History
 
 - Files land in plain folders: `Documents\Beam\Inbox` and `Documents\Beam\Outbox` — no database.
 - A single JSON index file tracks history metadata (id, direction, name, type, size, timestamp, read/unread).
-- The expanded widget shows a scrollable history (most recent first), capped to a configurable window (default: last 50 items or 7 days). Clicking an entry opens its file location (PC) or downloads it (phone).
+- The expanded widget shows a scrollable history (most recent first), capped to a configurable window (default: last 50 items or 7 days). Clicking a file entry opens its file location (PC) or downloads it (phone); clicking a text entry copies it straight to the clipboard on either side instead of opening a file.
 - No enforced file-size cap — it's LAN-only transfer; large videos just show a progress bar in the widget during transfer.
 
 ## UX / Visual Design Principles
