@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using Beam.Server.Storage;
 
 namespace Beam.App;
@@ -15,13 +14,11 @@ public class HistoryEntryViewModel
     public string DisplayTime => TimestampUtc.ToLocalTime().ToString("t");
 }
 
-public class HistoryViewModel : INotifyPropertyChanged
+public class HistoryViewModel
 {
     private readonly HistoryIndex _index;
 
     public ObservableCollection<HistoryEntryViewModel> Entries { get; } = new();
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public HistoryViewModel(HistoryIndex index)
     {
