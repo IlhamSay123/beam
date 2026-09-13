@@ -13,6 +13,11 @@
             <DoubleAnimation Storyboard.TargetProperty="Width" To="56" Duration="0:0:0.15"/>
             <DoubleAnimation Storyboard.TargetProperty="Height" To="56" Duration="0:0:0.15"/>
         </Storyboard>
+        <Storyboard x:Key="GlowPulseStoryboard">
+            <ColorAnimation Storyboard.TargetName="RootBorderBrush"
+                             Storyboard.TargetProperty="Color"
+                             From="#FF1F1F1F" To="#FF4FC3F7" Duration="0:0:0.25" AutoReverse="True"/>
+        </Storyboard>
     </Window.Resources>
     <Border x:Name="RootBorder" CornerRadius="16" Background="#FF1F1F1F"
             BorderThickness="2"

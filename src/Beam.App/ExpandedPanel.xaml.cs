@@ -18,6 +18,8 @@ public partial class ExpandedPanel : UserControl
         HistoryList.ItemsSource = _viewModel.Entries;
     }
 
+    public void RefreshHistory() => _viewModel.Refresh();
+
     private void ExpandedPanel_Drop(object sender, DragEventArgs e)
     {
         if (!e.Data.GetDataPresent(DataFormats.FileDrop))
