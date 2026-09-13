@@ -11,6 +11,7 @@ public partial class App : Application
     public static BeamServerOptions Options { get; private set; } = null!;
 
     private TrayIconService? _trayIconService;
+    private readonly MdnsAdvertiser _advertiser = new();
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -24,6 +25,8 @@ public partial class App : Application
         ServerApp = BeamServerHost.Build(Options);
         await ServerApp.StartAsync();
 
+        _advertiser.Start(Options.Port);
+
         _trayIconService = new TrayIconService();
         _trayIconService.Initialize();
     }
@@ -31,6 +34,7 @@ public partial class App : Application
     protected override async void OnExit(ExitEventArgs e)
     {
         _trayIconService?.Dispose();
+        _advertiser.Stop();
         await ServerApp.StopAsync();
         base.OnExit(e);
     }
