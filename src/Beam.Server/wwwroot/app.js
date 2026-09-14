@@ -51,12 +51,38 @@ function renderItems(items) {
       const link = document.createElement("a");
       link.textContent = `Download ${item.name}`;
       link.href = `/outbox/${item.id}/content`;
-      link.addEventListener("click", () => ack(item.id));
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        downloadFile(item);
+      });
       li.appendChild(link);
     }
 
     list.appendChild(li);
   }
+}
+
+async function downloadFile(item) {
+  const token = getToken();
+  const response = await fetch(`/outbox/${item.id}/content`, {
+    headers: { "X-Beam-Token": token },
+  });
+  if (!response.ok) {
+    return;
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = item.name;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  await ack(item.id);
+  loadOutbox();
 }
 
 async function copyText(item) {
