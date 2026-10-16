@@ -1,0 +1,32 @@
+BEAM - TRUSTED LAN ALPHA
+
+1. Extract the complete ZIP to a folder. Keep its files together.
+2. Open Beam.App.exe on your Windows PC. No .NET installation is required.
+3. Allow Beam on your trusted private network if Windows prompts.
+4. Put the iPhone and PC on a reachable local network.
+5. Click Pair phone in Beam and scan its QR with the iPhone camera.
+6. Safari opens Beam. Use Send for photos, videos, files, notes and links.
+   Use Receive for files and text queued from the PC.
+
+Shortcuts is NOT required. The optional Share Sheet Shortcut remains supported.
+Uploads are limited to 100 MB per file and notes to 64 KB of UTF-8 text.
+Keep Safari open during transfers. Check the result of each item in Uploads.
+Cancelling or losing a response does not prove the PC did not save the item;
+retrying an unconfirmed upload can create another copy. Queues are not resumed
+after reloading or closing the phone page.
+
+WINDOWS CONTROLS
+Pill mode keeps a small widget on-screen. Minimize uses the taskbar.
+Hide to tray keeps Beam receiving. Close / Quit stops Beam completely after
+active desktop queue work finishes.
+
+DATA AND SECURITY
+Files and notes are stored under Documents/Beam on the Windows account.
+This alpha uses unencrypted local HTTP and a shared pairing token. Use only
+on a trusted local network. Never port-forward Beam or expose it to the internet.
+Do not share your pairing QR, token, private files, or history.json.
+
+This development build is unsigned. Windows may show a security warning.
+Only run a download whose source and checksum you trust; do not disable Windows
+security globally. An installer and production security hardening are not yet
+included. The Windows executable is x64.

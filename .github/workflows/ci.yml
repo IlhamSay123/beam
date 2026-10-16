@@ -22,20 +22,28 @@ jobs:
       - run: dotnet test tests/Beam.Server.Tests/Beam.Server.Tests.csproj --configuration Release --no-build
 
   browser:
-    name: Browser Regression Tests
+    name: Browser Tests (${{ matrix.engine }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        engine: [chromium, webkit]
     defaults:
       run:
         working-directory: tests/Beam.Web.Tests
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: tests/Beam.Web.Tests/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: dotnet build ../Beam.Web.Host/Beam.Web.Host.csproj --configuration Release
+      - run: npx playwright install --with-deps ${{ matrix.engine }}
       - run: npm test
         env:
           BEAM_BROWSER: chromium
+          BEAM_ENGINE: ${{ matrix.engine }}

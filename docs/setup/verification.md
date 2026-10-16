@@ -2,6 +2,13 @@
 
 ## Current snapshot: 2026-10-16
 
+Safari-first milestone: 71 backend checks and 23 browser checks pass in each of
+Chromium and WebKit, plus the native desktop smoke harness. Browser integration
+now uploads to an isolated real ASP.NET Core server and checks saved original
+filenames, exact bytes, duplicate-name handling, notes, downloads and acknowledgements.
+The new phone upload interface has not yet been acceptance-tested on a physical
+iPhone. Use [Safari setup](safari-setup.md) for that next manual check.
+
 Fresh publication checks pass: 35 backend tests, 10 Edge browser tests from a
 clean npm install, and the native desktop smoke harness. The harness exercises
 the real app/tray/server lifecycle with isolated data, including quitting from
@@ -24,14 +31,18 @@ From the implementation worktree:
 dotnet build Beam.sln
 dotnet test tests/Beam.Server.Tests/Beam.Server.Tests.csproj
 dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj
+dotnet build tests/Beam.Web.Host/Beam.Web.Host.csproj --configuration Release
 cd tests/Beam.Web.Tests
 npm install
+npx playwright install webkit
 npm test
 ```
 
 Browser tests use installed Microsoft Edge by default. Set BEAM_BROWSER
 to another Playwright Chromium channel if needed. Set BEAM_SCREENSHOTS
 to an output directory to capture the 320, 390 and 1440 pixel layouts.
+Build tests/Beam.Web.Host/Beam.Web.Host.csproj in Release first for the integration
+fixture. Set BEAM_ENGINE=webkit to run the browser suite in WebKit.
 
 Backend tests exercise token authentication, multipart files/text,
 outbox downloads/acknowledgements, storage, restart persistence and static

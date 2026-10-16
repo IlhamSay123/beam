@@ -2,6 +2,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Beam.Server\Beam.Server.csproj" />
+    <Content Include="..\Beam.Server\wwwroot\**\*"
+             Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

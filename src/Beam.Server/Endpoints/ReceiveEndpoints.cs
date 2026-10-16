@@ -1,5 +1,6 @@
 // src/Beam.Server/Endpoints/ReceiveEndpoints.cs
 using Beam.Server.Storage;
+using System.Text;
 
 namespace Beam.Server.Endpoints;
 
@@ -7,8 +8,18 @@ public static class ReceiveEndpoints
 {
     public static void MapReceiveEndpoints(this WebApplication app)
     {
-        app.MapPost("/receive", async (HttpRequest request, HistoryIndex index, ItemStore store) =>
+        app.MapPost("/receive", ReceiveAsync);
+    }
+
+    private static async Task<IResult> ReceiveAsync(HttpRequest request, HistoryIndex index, ItemStore store,
+        BeamServerOptions options)
+    {
+        var cancellationToken = request.HttpContext.RequestAborted;
+        try
         {
+            if (request.ContentLength > options.MaxRequestBodyBytes)
+                return RequestTooLarge(options);
+
             if (!request.HasFormContentType)
             {
                 if (string.IsNullOrWhiteSpace(request.ContentType))
@@ -20,6 +31,9 @@ public static class ReceiveEndpoints
                 {
                     return Results.BadRequest("No file bytes received.");
                 }
+
+                if (request.ContentLength > options.MaxUploadBytes)
+                    return FileTooLarge(options);
 
                 // Shortcuts' Request Body: File sends the bytes directly, not multipart.
                 var contentType = request.ContentType.Split(';')[0].Trim().ToLowerInvariant();
@@ -39,7 +53,8 @@ public static class ReceiveEndpoints
                     _ => ".bin"
                 };
                 var name = $"Beam-{Guid.NewGuid():N}{extension}";
-                var savedPath = await store.SaveFileAsync("inbound", name, request.Body);
+                var savedPath = await store.SaveFileAsync("inbound", name, request.Body,
+                    cancellationToken, options.MaxUploadBytes);
                 var size = new FileInfo(savedPath).Length;
                 if (size == 0)
                 {
@@ -63,17 +78,28 @@ public static class ReceiveEndpoints
                 return Results.Ok(new { ids = new[] { item.Id } });
             }
 
-            var form = await request.ReadFormAsync();
-            if (form.Files.Count == 0 && string.IsNullOrEmpty(form["text"].ToString()))
+            var form = await request.ReadFormAsync(cancellationToken);
+            var text = form["text"].ToString();
+            if (form.Files.Count == 0 && string.IsNullOrEmpty(text))
             {
                 return Results.BadRequest("No file bytes or text received. For a single file in Shortcuts, use Request Body: File with Shortcut Input.");
             }
+
+            // Validate the entire form before any files or history entries are saved.
+            if (form.Files.Any(file => file.Length > options.MaxUploadBytes))
+                return FileTooLarge(options);
+            var textBytes = Encoding.UTF8.GetByteCount(text);
+            if (textBytes > options.MaxTextBytes)
+                return Results.Text($"Text is too large. The limit is {options.MaxTextBytes} UTF-8 bytes.",
+                    statusCode: StatusCodes.Status413PayloadTooLarge);
+
             var createdIds = new List<string>();
 
             foreach (var file in form.Files)
             {
                 await using var stream = file.OpenReadStream();
-                var savedPath = await store.SaveFileAsync("inbound", file.FileName, stream);
+                var savedPath = await store.SaveFileAsync("inbound", file.FileName, stream,
+                    cancellationToken, options.MaxUploadBytes);
 
                 var item = new HistoryItem
                 {
@@ -92,7 +118,6 @@ public static class ReceiveEndpoints
                 createdIds.Add(item.Id);
             }
 
-            var text = form["text"].ToString();
             if (!string.IsNullOrEmpty(text))
             {
                 var item = new HistoryItem
@@ -101,7 +126,7 @@ public static class ReceiveEndpoints
                     Direction = "inbound",
                     Name = "Text",
                     ContentType = "text/plain",
-                    SizeBytes = System.Text.Encoding.UTF8.GetByteCount(text),
+                    SizeBytes = textBytes,
                     TimestampUtc = DateTimeOffset.UtcNow,
                     Read = false,
                     IsText = true,
@@ -113,6 +138,26 @@ public static class ReceiveEndpoints
             }
 
             return Results.Ok(new { ids = createdIds });
-        });
+        }
+        catch (ItemSizeLimitExceededException)
+        {
+            return FileTooLarge(options);
+        }
+        catch (BadHttpRequestException error) when (error.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            return RequestTooLarge(options);
+        }
+        catch (InvalidDataException)
+        {
+            return Results.BadRequest("Invalid form data.");
+        }
     }
+
+    private static IResult FileTooLarge(BeamServerOptions options) =>
+        Results.Text($"File is too large. The limit is {options.MaxUploadBytes} bytes per file.",
+            statusCode: StatusCodes.Status413PayloadTooLarge);
+
+    private static IResult RequestTooLarge(BeamServerOptions options) =>
+        Results.Text($"Request is too large. The limit is {options.MaxRequestBodyBytes} bytes including form overhead.",
+            statusCode: StatusCodes.Status413PayloadTooLarge);
 }

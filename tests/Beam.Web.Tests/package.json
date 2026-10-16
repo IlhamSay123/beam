@@ -1,6 +1,6 @@
 {
   "name": "beam-web-tests",
   "private": true,
-  "scripts": { "test": "node --test app.test.cjs" },
+  "scripts": { "test": "node --test *.test.cjs" },
   "devDependencies": { "playwright": "1.62.1" }
 }

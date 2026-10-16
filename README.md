@@ -2,8 +2,8 @@
 
 **Files and notes between your Windows PC and iPhone, over your local network.**
 
-Beam is a Windows desktop app with an embedded HTTP server, a phone browser
-inbox, and an iOS Share Sheet workflow built with Shortcuts. No cloud relay or
+Beam is a Windows desktop app with an embedded HTTP server and a two-way phone
+browser interface. iOS Shortcuts is optional, not required. No cloud relay or
 Beam account is required for transfers. Both devices need to reach the same PC
 on the local network.
 
@@ -14,13 +14,24 @@ on the local network.
 
 Screenshots use generated demo files and notes, not personal transfers.
 
+### Safari First
+
+Scan the PC's QR, then use **Send** and **Receive** in Safari. No Shortcut is
+required for files, photos, videos, notes or links.
+
+[Download the Windows x64 alpha](https://github.com/IlhamSay123/beam/releases/tag/v0.1.0-alpha.1).
+Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
+.NET installation is required. This remains an unsigned trusted-LAN alpha.
+
+<img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
+
 ## What Works
 
 | Area | Current functionality |
 | --- | --- |
 | PC to phone | Queue files, typed notes, and clipboard text. Download files or copy notes from the phone browser. |
-| Phone to PC | Send text, URLs, photos, and files through an authenticated iOS Shortcut. |
-| Multiple photos | Repeat with Each uploads selected items individually; six-photo sending has been confirmed on a real iPhone. |
+| Phone to PC | Choose photos/videos/files or send notes/URLs directly in Safari, with per-item upload progress, cancel and retry. An iOS Shortcut remains optional. |
+| Multiple photos | Select several in Safari and upload sequentially with original filenames. The older optional Shortcut's six-photo flow was verified on a real iPhone; the new browser flow still needs an iPhone acceptance test. |
 | Desktop workspace | Resizable Transfer and Vault views, file picker, drag-and-drop, queue feedback, and arrival animations. |
 | Compact widget | Draggable, always-on-top 164 x 48 pill with status feedback, file drops, expansion, and a context menu. |
 | Vault | Search filenames and note contents, filter direction/type, sort by date, preview images/notes, open, reveal, copy, and resend. |
@@ -42,8 +53,8 @@ Screenshots use generated demo files and notes, not personal transfers.
 ## Requirements
 
 - Windows 10/11 for the WPF desktop app.
-- .NET 8 SDK to build and run from source.
-- An iPhone with Safari or another browser; Apple's Shortcuts app for sending.
+- .NET 8 SDK to build and run from source; the self-contained ZIP needs no .NET installation.
+- An iPhone with Safari or another browser. No App Store installation or Shortcut is needed.
 - A local network that allows the phone to connect to the PC on TCP port `8787`.
 - Node.js 22+ and Microsoft Edge for the browser test suite, or another installed
   Playwright Chromium channel selected with `BEAM_BROWSER`.
@@ -81,8 +92,7 @@ dotnet publish src/Beam.App/Beam.App.csproj `
 ```
 
 Keep the complete publish folder together; it includes the browser assets and
-dependencies. An installer, code signing, auto-updating, and published releases
-are not provided yet.
+dependencies. An installer, code signing and auto-updating are not provided yet.
 
 ## Connect an iPhone
 
@@ -100,8 +110,20 @@ prompted. Do not disable the firewall globally. Guest networks, extender client
 isolation, and router isolation can prevent devices from reaching each other
 even when their Wi-Fi names look similar.
 
-The QR pairs the browser; it does not install the sending Shortcut. Follow the
-[iPhone Shortcut guide](docs/setup/ios-shortcut-setup.md) for phone-to-PC transfers.
+To send from the phone, open **Send**, choose files/photos, or enter a note/link.
+See the [Safari guide](docs/setup/safari-setup.md). The
+[Share Sheet Shortcut](docs/setup/ios-shortcut-setup.md) is an optional convenience.
+
+### Windows Alpha Package
+
+```powershell
+./scripts/Publish-Beam.ps1
+```
+
+This produces a versioned, self-contained win-x64 ZIP and SHA-256 checksum under
+artifacts/release, including START-HERE.txt. The Package Windows Alpha workflow
+can build the same downloadable artifact in GitHub Actions. It is unsigned and
+remains a trusted-LAN alpha, not a signed installer or hardened public service.
 
 ### Shortcut Request Summary
 
@@ -171,7 +193,8 @@ Windows WPF app -- embedded ASP.NET Core server -- Inbox + history.json
 | `src/Beam.Server/wwwroot/` | Phone browser inbox; no frontend build step |
 | `tests/Beam.Server.Tests/` | Backend unit/integration tests |
 | `tests/Beam.App.Smoke/` | Windows desktop smoke harness with isolated data and a random port |
-| `tests/Beam.Web.Tests/` | Node test runner and Playwright browser regression tests |
+| `tests/Beam.Web.Tests/` | Chromium/WebKit browser regressions and real-server integration tests |
+| `tests/Beam.Web.Host/` | Isolated real server fixture for browser integration tests |
 | `docs/setup/` | Current setup, desktop behavior, and verification guides |
 | `docs/superpowers/` | Historical design/implementation notes; some describe earlier behavior |
 
@@ -185,6 +208,7 @@ are public so a phone can load the pairing UI without already knowing the token.
 | GET | `/` | Redirect to `/app/`; does not disclose the PC token |
 | GET | `/app/` | Phone inbox and pairing UI |
 | POST | `/receive` | Save multipart files/`text`, or a direct file body; return created IDs |
+| GET | `/capabilities` | Authenticated file/note upload limits |
 | GET | `/outbox` | List unread outbound items |
 | GET | `/outbox/{id}/content` | Stream stored file bytes |
 | POST | `/outbox/{id}/ack` | Persist acknowledgement |
@@ -205,9 +229,15 @@ dotnet test tests/Beam.Server.Tests/Beam.Server.Tests.csproj
 dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj
 
 # Phone browser regression tests (Edge must be installed)
+dotnet build tests/Beam.Web.Host/Beam.Web.Host.csproj --configuration Release
 Push-Location tests/Beam.Web.Tests
 npm ci
 npm test
+# Safari-family engine (not a real iPhone)
+npx playwright install webkit
+$env:BEAM_ENGINE = "webkit"
+npm test
+Remove-Item Env:BEAM_ENGINE
 Pop-Location
 ```
 
@@ -217,9 +247,11 @@ hide/reopen, and quitting from window/tray during a pending save. It checks that
 the tray icon is disposed, history survives, and the server port is released.
 
 The browser tests exercise the real HTML/CSS/JavaScript with fixture HTTP
-responses, including plain-HTTP clipboard fallback, direct-tap download saving,
+responses and an isolated real ASP.NET Core host, including plain-HTTP clipboard fallback, direct-tap download saving,
 invalid-token recovery, network/acknowledgement failures, responsive layouts,
-download timeouts, and polling races. They do not automate real iOS Safari.
+download timeouts, polling races, browser uploads, original names/bytes, progress
+states, cancellation and retry. WebKit is Safari-family engine coverage, not
+automation of a physical iPhone.
 
 GitHub Actions builds the Windows solution and runs backend/browser checks.
 Native tray/desktop smoke tests remain a local Windows check. Read the
@@ -234,8 +266,10 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
   and in browser local storage. QR pairing links also contain it.
 - Anyone with network access and the token can use the protected endpoints.
   There is no per-device identity, expiry, device-revocation UI, or rate limiting.
-- Phone downloads are prepared in browser memory. Large files are constrained
-  by phone memory and the server's current request limits; uploads are not resumable.
+- Default uploads are capped at 100 MiB per file and notes at 64 KiB UTF-8;
+  uploads are not resumable. Queues do not survive page reloads. Unconfirmed
+  retries can create duplicates. Keep Safari open during a transfer.
+- Phone downloads are prepared in browser memory and constrained by available memory.
 - Windows image codec availability affects previews, especially HEIC/WebP.
 - Folder transfers, mixed-DPI multi-monitor behavior, and all iOS versions have
   not been fully verified.
@@ -244,7 +278,8 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 
 ## Next Improvements
 
-- Original iPhone filenames and richer upload metadata.
+- Original filename metadata for the optional Shortcut (Safari already preserves its picker filenames).
+- Migrate from .NET 8 before its end of support; this milestone still targets .NET 8.
 - Real byte progress, cancellation, retries, and resumable large transfers.
 - Favorites/pinning and optional storage cleanup controls.
 - Better network diagnostics and device connection visibility.

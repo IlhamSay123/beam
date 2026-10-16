@@ -1,7 +1,12 @@
-# Setting up Send to Beam on iPhone
+# Optional Share Sheet Shortcut
+
+Shortcuts is **not required**. Safari now sends and receives photos, videos,
+files, notes and links directly. Start with the [Safari guide](safari-setup.md).
+Only follow this guide if you also want a Send to Beam action in the iOS
+Share Sheet.
 
 The PC app must be running and both devices must be on the same WiFi.
-Right-click Beam's tray icon and choose **Show Pairing QR**. Scan the QR
+Right-click Beam's tray icon and choose **Pair Phone**. Scan the QR
 with the phone camera to pair the browser automatically. In Safari, use
 Share > Add to Home Screen to keep Beam handy.
 

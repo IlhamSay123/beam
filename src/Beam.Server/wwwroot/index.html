@@ -6,13 +6,13 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="referrer" content="no-referrer" />
   <meta name="theme-color" content="#141618" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
   <title>Beam</title>
 </head>
 <body>
   <header>
     <div class="brand"><span class="beam-mark" aria-hidden="true"><i></i><i></i><i></i></span><h1>Beam</h1></div>
-    <span class="header-label">From PC</span>
+    <span id="connectionStatus" class="header-label" role="status">Pairing needed</span>
   </header>
   <div id="setup" hidden>
     <label for="tokenInput">PC token</label>
@@ -20,9 +20,36 @@
     <button id="saveTokenButton">Save</button>
     <p id="tokenError" hidden>Wrong token &mdash; check for typos and try again.</p>
   </div>
-  <p id="status" role="status" aria-live="polite"></p>
-  <p id="empty" hidden>No pending items.</p>
-  <ul id="items"></ul>
-  <script src="app.js?v=3"></script>
+  <main id="transferShell" hidden>
+    <nav class="tabs" role="tablist" aria-label="Transfer direction">
+      <button id="receiveTab" role="tab" aria-selected="true" aria-controls="receivePanel">Receive<span id="receiveCount" aria-hidden="true"></span></button>
+      <button id="sendTab" role="tab" aria-selected="false" aria-controls="sendPanel" tabindex="-1">Send</button>
+    </nav>
+    <section id="receivePanel" role="tabpanel" aria-labelledby="receiveTab">
+      <div class="section-heading"><h2>From PC</h2></div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <p id="empty" hidden>No pending items.</p>
+      <ul id="items"></ul>
+    </section>
+    <section id="sendPanel" role="tabpanel" aria-labelledby="sendTab" hidden>
+      <div class="section-heading"><h2>To PC</h2><span id="uploadLimit" class="muted"></span></div>
+      <div class="file-actions">
+        <label class="picker"><span>Choose files</span><input id="fileInput" type="file" multiple aria-label="Choose files" disabled /></label>
+        <label class="picker"><span>Photos &amp; videos</span><input id="photoInput" type="file" multiple accept="image/*,video/*" aria-label="Choose photos and videos" disabled /></label>
+      </div>
+      <form id="noteForm">
+        <label for="noteInput">Note or link</label>
+        <textarea id="noteInput" rows="3" maxlength="65536" disabled></textarea>
+        <div class="compose-footer"><span id="noteSize" class="muted"></span><button id="sendNoteButton" type="submit" class="primary" disabled>Send note</button></div>
+      </form>
+      <p id="sendStatus" role="status" aria-live="polite"></p>
+      <section id="queueSection" hidden>
+        <div class="section-heading"><h3>Uploads</h3><button id="clearFinishedButton" type="button" class="quiet">Clear finished</button></div>
+        <p id="uploadSummary" class="muted" role="status" aria-live="polite"></p>
+        <ul id="uploadList"></ul>
+      </section>
+    </section>
+  </main>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

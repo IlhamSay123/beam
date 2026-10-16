@@ -2,6 +2,7 @@ using Beam.Server.Endpoints;
 using Beam.Server.Security;
 using Beam.Server.Storage;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Beam.Server;
 
@@ -29,6 +30,14 @@ public static class BeamServerHost
             builder.WebHost.UseUrls($"http://0.0.0.0:{options.Port}");
         }
 
+        builder.WebHost.ConfigureKestrel(server =>
+            server.Limits.MaxRequestBodySize = options.MaxRequestBodyBytes);
+        builder.Services.Configure<FormOptions>(form =>
+        {
+            form.MultipartBodyLengthLimit = options.MaxRequestBodyBytes;
+            form.ValueLengthLimit = (int)Math.Min(int.MaxValue, options.MaxRequestBodyBytes);
+        });
+
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(new HistoryIndex(Path.Combine(options.DataDirectory, "history.json")));
         builder.Services.AddSingleton(new ItemStore(options.DataDirectory));
@@ -36,6 +45,7 @@ public static class BeamServerHost
         var app = builder.Build();
 
         app.UseMiddleware<TokenAuthMiddleware>();
+        app.MapCapabilitiesEndpoints();
         app.MapReceiveEndpoints();
         app.MapOutboxEndpoints();
         app.MapConnectEndpoints();

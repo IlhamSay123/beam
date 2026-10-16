@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const http = require('node:http');
-const { chromium } = require('playwright');
+const { chromium, webkit } = require('playwright');
 
 let server, browser, origin;
 const webroot = path.resolve(__dirname, '../../src/Beam.Server/wwwroot');
@@ -17,7 +17,7 @@ before(async () => {
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
-  browser = await chromium.launch({ headless: true, channel: process.env.BEAM_BROWSER || 'msedge' });
+  browser = process.env.BEAM_ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch({ headless: true, channel: process.env.BEAM_BROWSER || 'msedge' });
 });
 after(async () => {
   await browser?.close();
@@ -73,10 +73,10 @@ test('a failed copy keeps selectable text and does not acknowledge', async () =>
   });
   try {
     await page.getByRole('button', { name: /Copy/ }).click();
-    await page.waitForFunction(() => document.querySelector('textarea') !== null);
-    assert.equal(await page.locator('textarea').inputValue(), 'hello from PC');
+    await page.waitForFunction(() => document.querySelector('#items textarea') !== null);
+    assert.equal(await page.locator('#items textarea').inputValue(), 'hello from PC');
     assert.equal(acknowledgements(), 0);
-    assert.equal(await page.locator('textarea').isVisible(), true);
+    assert.equal(await page.locator('#items textarea').isVisible(), true);
   } finally { await page.close(); }
 });
 

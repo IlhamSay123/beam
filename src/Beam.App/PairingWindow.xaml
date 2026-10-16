@@ -10,7 +10,7 @@
             <StackPanel Grid.Column="2">
                 <TextBlock Text="LOCAL ADDRESS" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
                 <TextBlock x:Name="HostText" FontSize="15" TextWrapping="Wrap" Margin="0,0,0,20"/>
-                <TextBlock Text="SHORTCUT TOKEN" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="PAIRING TOKEN" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
                 <TextBox x:Name="TokenText" IsReadOnly="True" TextWrapping="Wrap" FontSize="13"/>
                 <Button Click="CopyToken_Click" Margin="0,10,0,8"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Copy token"/></StackPanel></Button>
                 <Button Click="CopyLink_Click"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE71B;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Copy pairing link"/></StackPanel></Button>
