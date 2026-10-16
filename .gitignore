@@ -5,3 +5,15 @@ obj/
 *.suo
 *.sln.docstates
 .vscode/
+node_modules/
+artifacts/
+TestResults/
+*.log
+.claude/
+.env
+.env.*
+!.env.example
+**/token.txt
+**/history.json
+**/Inbox/
+**/Outbox/

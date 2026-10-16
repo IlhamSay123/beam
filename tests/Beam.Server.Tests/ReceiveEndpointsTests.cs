@@ -9,6 +9,59 @@ namespace Beam.Server.Tests;
 
 public class ReceiveEndpointsTests
 {
+    [Theory]
+    [InlineData("image/jpeg", ".jpg")]
+    [InlineData("application/octet-stream", ".bin")]
+    public async Task Receive_DirectFileBody_SavesExactBytes(string contentType, string extension)
+    {
+        var (app, client, options) = await StartAppAsync();
+        try
+        {
+            var bytes = new byte[] { 255, 216, 1, 2, 3, 255, 217 };
+            using var content = new ByteArrayContent(bytes);
+            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            var response = await client.PostAsync("/receive", content);
+            response.EnsureSuccessStatusCode();
+            var result = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(1, result.RootElement.GetProperty("ids").GetArrayLength());
+            var item = Assert.Single(new HistoryIndex(Path.Combine(options.DataDirectory, "history.json")).List());
+            Assert.Equal("inbound", item.Direction);
+            Assert.Equal(contentType, item.ContentType);
+            Assert.EndsWith(extension, item.Name);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(item.FilePath!));
+        }
+        finally { await app.StopAsync(); }
+    }
+
+    [Fact]
+    public async Task Receive_EmptyForm_ReturnsHelpfulErrorInsteadOfEmptySuccess()
+    {
+        var (app, client, _) = await StartAppAsync();
+        try
+        {
+            using var form = new FormUrlEncodedContent(new Dictionary<string, string> { ["files"] = "photo.jpg" });
+            var response = await client.PostAsync("/receive", form);
+            Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("No file bytes or text received", await response.Content.ReadAsStringAsync());
+        }
+        finally { await app.StopAsync(); }
+    }
+
+    [Fact]
+    public async Task Receive_EmptyDirectFile_Returns400WithoutSavingItem()
+    {
+        var (app, client, options) = await StartAppAsync();
+        try
+        {
+            using var content = new ByteArrayContent(Array.Empty<byte>());
+            content.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+            var response = await client.PostAsync("/receive", content);
+            Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Empty(Directory.GetFiles(Path.Combine(options.DataDirectory, "Inbox")));
+        }
+        finally { await app.StopAsync(); }
+    }
+
     private static async Task<(WebApplication app, HttpClient client, BeamServerOptions options)> StartAppAsync()
     {
         var dataDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

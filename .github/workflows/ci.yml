@@ -1,0 +1,41 @@
+name: Build and Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows Build and Backend Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore Beam.sln
+      - run: dotnet build Beam.sln --configuration Release --no-restore
+      - run: dotnet test tests/Beam.Server.Tests/Beam.Server.Tests.csproj --configuration Release --no-build
+
+  browser:
+    name: Browser Regression Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/Beam.Web.Tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/Beam.Web.Tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+        env:
+          BEAM_BROWSER: chromium

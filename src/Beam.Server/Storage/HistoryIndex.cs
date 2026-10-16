@@ -14,15 +14,11 @@ public class HistoryIndex
         _items = Load();
     }
 
-    private const int DefaultMaxItems = 50;
-    private static readonly TimeSpan DefaultMaxAge = TimeSpan.FromDays(7);
-
     public HistoryItem Add(HistoryItem item)
     {
         lock (_lock)
         {
             _items.Add(item);
-            PruneLocked(DefaultMaxItems, DefaultMaxAge);
             Save();
             return item;
         }
@@ -117,6 +113,15 @@ public class HistoryIndex
         }
 
         var json = JsonSerializer.Serialize(_items);
-        File.WriteAllText(_indexFilePath, json);
+        var temporaryPath = _indexFilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporaryPath, json);
+            File.Move(temporaryPath, _indexFilePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
     }
 }

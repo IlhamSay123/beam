@@ -20,8 +20,11 @@ public class ItemStore
         var safeName = $"{Guid.NewGuid():N}_{Path.GetFileName(fileName)}";
         var fullPath = Path.Combine(dir, safeName);
 
-        await using var fileStream = File.Create(fullPath);
-        await content.CopyToAsync(fileStream);
+        var fileStream = File.Create(fullPath);
+        await using (fileStream.ConfigureAwait(false))
+        {
+            await content.CopyToAsync(fileStream).ConfigureAwait(false);
+        }
 
         return fullPath;
     }

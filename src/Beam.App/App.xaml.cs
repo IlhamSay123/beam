@@ -32,11 +32,35 @@ public partial class App : Application
         _trayIconService.Initialize();
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    public static void ShowPairing()
+    {
+        var host = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
+                && n.NetworkInterfaceType is System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211 or System.Net.NetworkInformation.NetworkInterfaceType.Ethernet)
+            .OrderByDescending(n => n.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211)
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Select(a => a.Address)
+            .FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(a));
+        new PairingWindow(host?.ToString() ?? Advertiser.HostName ?? "beam-pc.local", Options.Port, Options.ExpectedToken).Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
     {
         _trayIconService?.Dispose();
         Advertiser.Stop();
-        await ServerApp.StopAsync();
+        if (ServerApp is not null)
+        {
+            try
+            {
+                Task.Run(async () =>
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    await ServerApp.StopAsync(timeout.Token);
+                    await ServerApp.DisposeAsync();
+                }).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException) { }
+        }
         base.OnExit(e);
     }
 }

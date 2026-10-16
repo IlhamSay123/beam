@@ -51,6 +51,10 @@ public class TokenAuthMiddlewareTests
             client.DefaultRequestHeaders.Add("X-Beam-Token", "wrong");
             var response = await client.GetAsync("/protected");
             Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.Contains("received 1 value(s), 5 character(s)", body);
+            Assert.DoesNotContain("secret123", body);
+            Assert.DoesNotContain("wrong", body);
         }
         finally
         {
@@ -66,6 +70,7 @@ public class TokenAuthMiddlewareTests
         {
             var response = await client.GetAsync("/protected");
             Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.Contains("X-Beam-Token header was not received", await response.Content.ReadAsStringAsync());
         }
         finally
         {

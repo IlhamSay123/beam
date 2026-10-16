@@ -11,10 +11,63 @@ public static class ReceiveEndpoints
         {
             if (!request.HasFormContentType)
             {
-                return Results.BadRequest("Expected multipart/form-data");
+                if (string.IsNullOrWhiteSpace(request.ContentType))
+                {
+                    return Results.BadRequest("Expected a form or a file body with Content-Type.");
+                }
+
+                if (request.ContentLength == 0)
+                {
+                    return Results.BadRequest("No file bytes received.");
+                }
+
+                // Shortcuts' Request Body: File sends the bytes directly, not multipart.
+                var contentType = request.ContentType.Split(';')[0].Trim().ToLowerInvariant();
+                var extension = contentType switch
+                {
+                    "image/jpeg" => ".jpg",
+                    "image/png" => ".png",
+                    "image/heic" => ".heic",
+                    "image/heif" => ".heif",
+                    "image/gif" => ".gif",
+                    "image/webp" => ".webp",
+                    "application/pdf" => ".pdf",
+                    "text/plain" => ".txt",
+                    "video/mp4" => ".mp4",
+                    "video/quicktime" => ".mov",
+                    "audio/mpeg" => ".mp3",
+                    _ => ".bin"
+                };
+                var name = $"Beam-{Guid.NewGuid():N}{extension}";
+                var savedPath = await store.SaveFileAsync("inbound", name, request.Body);
+                var size = new FileInfo(savedPath).Length;
+                if (size == 0)
+                {
+                    File.Delete(savedPath);
+                    return Results.BadRequest("No file bytes received.");
+                }
+
+                var item = new HistoryItem
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Direction = "inbound",
+                    Name = name,
+                    ContentType = contentType,
+                    SizeBytes = size,
+                    TimestampUtc = DateTimeOffset.UtcNow,
+                    Read = false,
+                    IsText = false,
+                    FilePath = savedPath
+                };
+                index.Add(item);
+                return Results.Ok(new { ids = new[] { item.Id } });
             }
 
             var form = await request.ReadFormAsync();
+            if (form.Files.Count == 0 && string.IsNullOrEmpty(form["text"].ToString()))
+            {
+                return Results.BadRequest("No file bytes or text received. For a single file in Shortcuts, use Request Body: File with Shortcut Input.");
+            }
             var createdIds = new List<string>();
 
             foreach (var file in form.Files)

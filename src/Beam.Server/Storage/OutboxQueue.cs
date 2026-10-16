@@ -2,11 +2,11 @@ namespace Beam.Server.Storage;
 
 public static class OutboxQueue
 {
-    public static HistoryItem QueueFile(HistoryIndex index, ItemStore store, string sourceFilePath)
+    public static HistoryItem QueueFile(HistoryIndex index, ItemStore store, string sourceFilePath, string? displayName = null)
     {
         using var sourceStream = File.OpenRead(sourceFilePath);
         var savedPath = store
-            .SaveFileAsync("outbound", Path.GetFileName(sourceFilePath), sourceStream)
+            .SaveFileAsync("outbound", Path.GetFileName(displayName ?? sourceFilePath), sourceStream)
             .GetAwaiter()
             .GetResult();
 
@@ -14,7 +14,7 @@ public static class OutboxQueue
         {
             Id = Guid.NewGuid().ToString("N"),
             Direction = "outbound",
-            Name = Path.GetFileName(sourceFilePath),
+            Name = Path.GetFileName(displayName ?? sourceFilePath),
             ContentType = "application/octet-stream",
             SizeBytes = new FileInfo(savedPath).Length,
             TimestampUtc = DateTimeOffset.UtcNow,

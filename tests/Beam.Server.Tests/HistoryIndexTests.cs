@@ -4,6 +4,18 @@ namespace Beam.Server.Tests;
 
 public class HistoryIndexTests
 {
+    [Fact]
+    public void Add_KeepsVaultRecordsBeyondSevenDaysAndFiftyItems()
+    {
+        var path = TempIndexPath();
+        var index = new HistoryIndex(path);
+        index.Add(MakeItem("old", "inbound", ts: DateTimeOffset.UtcNow.AddDays(-30)));
+        for (var i = 0; i < 60; i++) index.Add(MakeItem($"recent-{i}", "outbound"));
+        var reloaded = new HistoryIndex(path);
+        Assert.Equal(61, reloaded.List().Count);
+        Assert.NotNull(reloaded.Get("old"));
+    }
+
     private static HistoryItem MakeItem(string id, string direction, bool read = false, DateTimeOffset? ts = null) =>
         new()
         {
