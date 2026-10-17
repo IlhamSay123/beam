@@ -16,12 +16,15 @@ Screenshots use generated demo files and notes, not personal transfers.
 
 ### Safari First
 
-Scan the PC's QR, then use **Send** and **Receive** in Safari. No Shortcut is
+Scan the PC's QR, then use **Send**, **Receive**, and **Vault** in Safari. No Shortcut is
 required for files, photos, videos, notes or links.
 
 [Download the Windows x64 alpha](https://github.com/IlhamSay123/beam/releases/tag/v0.1.0-alpha.1).
 Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
 .NET installation is required. This remains an unsigned trusted-LAN alpha.
+
+The phone Vault, file-type motion, connection/setup polish and safe Safari
+retries are newer source changes, not part of the downloadable alpha.1 release yet.
 
 <img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
 
@@ -31,11 +34,13 @@ Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
 | --- | --- |
 | PC to phone | Queue files, typed notes, and clipboard text. Download files or copy notes from the phone browser. |
 | Phone to PC | Choose photos/videos/files or send notes/URLs directly in Safari, with per-item upload progress, cancel and retry. An iOS Shortcut remains optional. |
+| Safe Safari retries | Retry checks a saved receipt first, reuses the original transfer ID, and confirms an already received file/note without creating another copy. |
 | Multiple photos | Select several in Safari and upload sequentially with original filenames. The older optional Shortcut's six-photo flow was verified on a real iPhone; the new browser flow still needs an iPhone acceptance test. |
 | Desktop workspace | Resizable Transfer and Vault views, file picker, drag-and-drop, queue feedback, and arrival animations. |
-| Compact widget | Draggable, always-on-top 164 x 48 pill with status feedback, file drops, expansion, and a context menu. |
-| Vault | Search filenames and note contents, filter direction/type, sort by date, preview images/notes, open, reveal, copy, and resend. |
-| Pairing | QR browser pairing, local IP fallback, and copyable token/link. |
+| Compact widget | Draggable, always-on-top 164 x 48 pill with directional file-type motion, status feedback, file drops, expansion, and a context menu. |
+| Vault | Both directions on phone and desktop. Safari supports search, direction/type filters, image/note previews and repeat copy/download; desktop adds sorting, open, reveal, and resend. |
+| Pairing | First-run setup, refreshable adapter/address selection, QR browser pairing, copyable token/link, local checks and redacted diagnostics. |
+| Connection status | Recent authenticated remote-browser activity and last-seen on Windows; visible retry and foreground reconnection in Safari. |
 | Persistence | Inbox, outbox, notes, and acknowledgement state survive app restarts. Records no longer expire automatically. |
 | Error handling | Missing files, invalid tokens, network failures, empty uploads, and failed acknowledgements are surfaced. |
 
@@ -97,10 +102,12 @@ dependencies. An installer, code signing and auto-updating are not provided yet.
 ## Connect an iPhone
 
 1. Start Beam on the PC. Put both devices on a reachable local network.
-2. Open **Pair phone** in the desktop workspace or tray menu.
+2. Pairing opens automatically on the first launch. Later, open **Pair phone**
+   in the desktop workspace or tray menu. You can defer setup without exiting Beam.
 3. Scan the QR code with the phone. The link pairs the browser with the PC token.
-4. If the hostname does not resolve, use the PC's Wi-Fi IPv4 address:
-   `http://<PC-IP>:8787/app/`. The pairing screen displays a local address.
+4. If the address is unreachable, refresh the address list and select the adapter
+   for the network shared with the phone. The QR and manual address update together:
+   `http://<PC-IP>:8787/app/`. No usable adapter means no QR is offered.
 5. If pairing manually, enter the PC token shown in Beam.
 6. Queue a note or file on the PC. On the phone, use **Copy**, or tap
    **Download** and then **Save** for a file.
@@ -109,6 +116,18 @@ Allow Beam through the Windows firewall on your trusted private network if
 prompted. Do not disable the firewall globally. Guest networks, extender client
 isolation, and router isolation can prevent devices from reaching each other
 even when their Wi-Fi names look similar.
+
+The pairing checks can verify the local adapter and the PC's own HTTP server.
+They cannot prove that the phone's network path, router or firewall permits a
+connection. Copied diagnostics omit the token, pairing URL and transfer contents;
+they include the selected local IP and port. Review diagnostics before sharing.
+
+Remote Safari pages send a small authenticated heartbeat every five seconds
+while visible. Windows activity expires after 15 seconds without a heartbeat;
+last-seen is kept in memory until Beam closes. Local PC previews/checks do not
+count as a phone connection. Activity is not device identity or proof of delivery.
+Use Safari's retry control or return to the page to recheck the connection;
+after an IP change, a fresh QR scan may still be necessary.
 
 To send from the phone, open **Send**, choose files/photos, or enter a note/link.
 See the [Safari guide](docs/setup/safari-setup.md). The
@@ -168,6 +187,20 @@ Documents/Beam/
   active queue work to finish.
 - There is no storage quota, encrypted vault, recycle bin, or automatic cleanup UI.
 
+The one-time Windows setup-offer marker lives separately at
+`%LOCALAPPDATA%/Beam/setup-offered-v1`. It contains no token or transfer history;
+deferring setup does not change files in Inbox/Outbox.
+
+On the phone, copied/downloaded items leave the pending Receive list but remain
+in Vault. History is paginated and authenticated; previews never acknowledge a
+transfer. Safe raster thumbnails are loaded locally on demand, with icon fallback
+for unsupported formats or large images. The PC must stay running and reachable.
+
+File-type animations distinguish incoming (cyan) and outgoing (gold). Browser
+percentages reflect transferred bytes; Windows glides announce real queue,
+arrival or acknowledgement events without pretending to measure transport.
+Both surfaces respect their platform's reduced-motion setting.
+
 **Queued** means waiting for the phone to acknowledge. **Delivered** means the
 browser acknowledged the copy/download action; it cannot prove that a user
 finished saving a file permanently. **LAN ready** describes the PC server, not
@@ -207,17 +240,37 @@ are public so a phone can load the pairing UI without already knowing the token.
 | --- | --- | --- |
 | GET | `/` | Redirect to `/app/`; does not disclose the PC token |
 | GET | `/app/` | Phone inbox and pairing UI |
-| POST | `/receive` | Save multipart files/`text`, or a direct file body; return created IDs |
-| GET | `/capabilities` | Authenticated file/note upload limits |
+| POST | `/receive` | Save multipart files/`text`, or a legacy direct file body; optional `X-Beam-Transfer-Id` enables single-item idempotent Safari uploads |
+| GET | `/receive/receipts/{transferId}` | Retrieve a committed one-ID receipt (200), pending attempt (202), or unknown ID (404); never resaves or acknowledges an item |
+| GET | `/capabilities` | Authenticated file/note limits and `safeRetryVersion: 1` |
+| POST | `/connection/heartbeat` | Authenticated foreground-browser activity; bounded transient session ID, no acknowledgement or persisted device record |
 | GET | `/outbox` | List unread outbound items |
 | GET | `/outbox/{id}/content` | Stream stored file bytes |
 | POST | `/outbox/{id}/ack` | Persist acknowledgement |
+| GET | `/vault?search=&direction=inbound&kind=image&offset=0&limit=40` | Search retained history in both directions; default 40, maximum 100 records |
+| GET | `/vault/{id}/content` | Repeat download without changing read state |
+| GET | `/vault/{id}/preview` | Safe raster preview without changing read state |
 
 Successful uploads return `{"ids":["<item-id>"]}`. An invalid token returns
 `401`; an empty form or empty direct upload returns `400`. A filename extension
 is inferred for common direct-upload media types; unknown types use `.bin`.
 The outbox is polled approximately every four seconds; desktop history refreshes
 approximately every two seconds.
+
+### Safe Retry Contract
+
+Current Safari jobs use one random `X-Beam-Transfer-Id` for their lifetime.
+The PC stores its payload fingerprint with the received history item before
+confirming success. Replaying the same ID/body returns the original item ID;
+reusing it for different bytes/name/media type/text returns `409` without saving.
+Receipt checks reveal only item IDs, never filenames, paths or note contents.
+They are authenticated and non-cacheable. Coordinator capacity failures return
+`429`; storage failures return `503` without claiming a committed receipt.
+
+This protects retries on the same in-page job, including uncertain cancellations,
+and keeps receipts across clean PC restarts. It does not deduplicate intentional
+new sends, persist the phone queue, resume partial bytes, protect old headerless
+clients, or guarantee atomic file/index recovery after sudden power/disk loss.
 
 ## Tests
 
@@ -232,11 +285,11 @@ dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj
 dotnet build tests/Beam.Web.Host/Beam.Web.Host.csproj --configuration Release
 Push-Location tests/Beam.Web.Tests
 npm ci
-npm test
+node --test --test-concurrency=1 *.test.cjs
 # Safari-family engine (not a real iPhone)
 npx playwright install webkit
 $env:BEAM_ENGINE = "webkit"
-npm test
+node --test --test-concurrency=1 *.test.cjs
 Remove-Item Env:BEAM_ENGINE
 Pop-Location
 ```
@@ -267,8 +320,10 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 - Anyone with network access and the token can use the protected endpoints.
   There is no per-device identity, expiry, device-revocation UI, or rate limiting.
 - Default uploads are capped at 100 MiB per file and notes at 64 KiB UTF-8;
-  uploads are not resumable. Queues do not survive page reloads. Unconfirmed
-  retries can create duplicates. Keep Safari open during a transfer.
+  uploads are not chunk-resumable. Queues and retry IDs do not survive page reloads.
+  Use Retry on the existing Safari upload row; reselecting a file or clearing the
+  queue starts a new transfer and may create another copy. Legacy headerless
+  Shortcut/API uploads do not have safe-retry protection. Keep Safari open.
 - Phone downloads are prepared in browser memory and constrained by available memory.
 - Windows image codec availability affects previews, especially HEIC/WebP.
 - Folder transfers, mixed-DPI multi-monitor behavior, and all iOS versions have
@@ -280,7 +335,7 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 
 - Original filename metadata for the optional Shortcut (Safari already preserves its picker filenames).
 - Migrate from .NET 8 before its end of support; this milestone still targets .NET 8.
-- Real byte progress, cancellation, retries, and resumable large transfers.
+- Durable phone queues and chunk-resumable large transfers (current retries reuse whole retained files).
 - Favorites/pinning and optional storage cleanup controls.
 - Better network diagnostics and device connection visibility.
 - Encrypted transport, token rotation, and device-specific authorization.

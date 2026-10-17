@@ -1,6 +1,6 @@
 {
   "name": "beam-web-tests",
   "private": true,
-  "scripts": { "test": "node --test *.test.cjs" },
+  "scripts": { "test": "node --test --test-concurrency=1 *.test.cjs" },
   "devDependencies": { "playwright": "1.62.1" }
 }

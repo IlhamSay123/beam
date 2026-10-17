@@ -8,8 +8,9 @@ let server, browser, origin;
 before(async () => {
   const root = path.resolve(__dirname, '../../src/Beam.Server/wwwroot');
   server = http.createServer(async (req, res) => {
+    if (req.url === '/connection/heartbeat') return res.writeHead(204).end();
     const filename = new URL(req.url, 'http://localhost').pathname.split('/').pop() || 'index.html';
-    if (!['index.html', 'app.js', 'styles.css'].includes(filename)) return res.writeHead(404).end();
+    if (!['index.html', 'app.js', 'vault.js', 'motion.js', 'lucide.min.js', 'styles.css'].includes(filename)) return res.writeHead(404).end();
     res.writeHead(200, { 'Content-Type': filename.endsWith('.js') ? 'text/javascript' : filename.endsWith('.css') ? 'text/css' : 'text/html' });
     res.end(await fs.readFile(path.join(root, filename)));
   });
@@ -22,7 +23,8 @@ async function open(handler, maxUploadBytes = 104857600) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   page.setDefaultTimeout(4000);
   await page.route('**/outbox', route => route.fulfill({ json: [] }));
-  await page.route('**/capabilities', route => route.fulfill({ json: { maxUploadBytes, maxTextBytes: 65536 } }));
+  await page.route('**/capabilities', route => route.fulfill({ json: { maxUploadBytes, maxTextBytes: 65536, safeRetryVersion: 1 } }));
+  await page.route('**/receive/receipts/*', route => route.fulfill({ status: 404 }));
   await page.route('**/receive', handler);
   await page.goto(`${origin}/app/?token=test-token`);
   await page.getByRole('tab', { name: 'Send' }).click();
@@ -36,7 +38,7 @@ test('Safari composer sends notes and URLs using authenticated form data', async
   try {
     await page.getByLabel('Note or link').fill('https://example.com/hello\nA note');
     await page.getByRole('button', { name: 'Send note' }).click();
-    await page.getByText('Sent to PC', { exact: true }).waitFor();
+    await page.locator('#uploadList').getByText('Sent to PC', { exact: true }).waitFor();
     assert.equal(request.headers()['x-beam-token'], 'test-token');
     assert.match(request.headers()['content-type'], /multipart\/form-data; boundary=/);
     assert.match(request.postData(), /name="text"/);
@@ -98,7 +100,26 @@ test('uploaded bytes are not reported as saved until the PC confirms', async () 
     assert.equal(await page.locator('[data-state="sent"]').count(), 0);
     assert.ok(await page.getByRole('progressbar').isVisible());
     release();
-    await page.getByText('Sent to PC', { exact: true }).waitFor();
+    await page.locator('#uploadList').getByText('Sent to PC', { exact: true }).waitFor();
+  } finally { release(); await page.close(); }
+});
+
+test('unknown upload totals stay indeterminate instead of showing a measured zero percent', async () => {
+  let release; const pending = new Promise(resolve => { release = resolve; });
+  const page = await open(async route => { await pending; await route.fulfill({ json: { ids: ['confirmed'] } }); });
+  try {
+    await page.evaluate(() => {
+      const send = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function (...args) { window.testUpload = this; return send.apply(this, args); };
+    });
+    await page.locator('#fileInput').setInputFiles(file('unknown.png'));
+    await page.waitForFunction(() => window.testUpload?.upload?.onprogress);
+    await page.evaluate(() => window.testUpload.upload.onprogress({ lengthComputable: false, loaded: 12, total: 0 }));
+    assert.equal(await page.locator('#uploadList progress').getAttribute('value'), null);
+    assert.doesNotMatch(await page.locator('#motionProgress').innerText(), /\d+%/);
+    assert.doesNotMatch(await page.locator('.motion-lane').getAttribute('aria-label'), /\d+ percent/);
+    release();
+    await page.locator('#uploadList').getByText('Sent to PC', { exact: true }).waitFor();
   } finally { release(); await page.close(); }
 });
 
@@ -150,7 +171,7 @@ test('a delayed rejection from the old token cannot discard a successful re-pair
       started(); await pending;
       return route.fulfill({ status: 401 }).catch(() => {});
     }
-    return route.fulfill({ json: { maxUploadBytes: 104857600, maxTextBytes: 65536 } });
+    return route.fulfill({ json: { maxUploadBytes: 104857600, maxTextBytes: 65536, safeRetryVersion: 1 } });
   });
   try {
     await page.goto(`${origin}/app/?token=old-token`);
@@ -185,7 +206,7 @@ test('send and receive remain usable at small phone and desktop widths', async (
   const page = await open(route => route.fulfill({ json: { ids: ['saved'] } }));
   try {
     await page.locator('#fileInput').setInputFiles(file('a'.repeat(160) + '.png'));
-    await page.getByText('Sent to PC', { exact: true }).waitFor();
+    await page.locator('#uploadList').getByText('Sent to PC', { exact: true }).waitFor();
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

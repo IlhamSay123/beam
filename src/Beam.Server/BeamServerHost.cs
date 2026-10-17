@@ -1,6 +1,8 @@
 using Beam.Server.Endpoints;
+using Beam.Server.Connection;
 using Beam.Server.Security;
 using Beam.Server.Storage;
+using Beam.Server.Transfers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 
@@ -39,6 +41,8 @@ public static class BeamServerHost
         });
 
         builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton<ConnectionPresence>();
+        builder.Services.AddSingleton<ReceiveCoordinator>();
         builder.Services.AddSingleton(new HistoryIndex(Path.Combine(options.DataDirectory, "history.json")));
         builder.Services.AddSingleton(new ItemStore(options.DataDirectory));
 
@@ -46,8 +50,10 @@ public static class BeamServerHost
 
         app.UseMiddleware<TokenAuthMiddleware>();
         app.MapCapabilitiesEndpoints();
+        app.MapConnectionEndpoints();
         app.MapReceiveEndpoints();
         app.MapOutboxEndpoints();
+        app.MapVaultEndpoints();
         app.MapConnectEndpoints();
 
         // Serves wwwroot/index.html (and app.js/styles.css/manifest) under

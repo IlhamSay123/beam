@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using Beam.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
@@ -18,8 +17,13 @@ public partial class ExpandedPanel : UserControl
     private readonly HistoryViewModel _viewModel;
     private bool _isSendingFiles;
     private Task _activeQueue = Task.CompletedTask;
+    private Task _refreshTask = Task.CompletedTask;
+    private readonly CancellationTokenSource _lifetime = new();
+    private bool _refreshAgain;
+    private bool _closed;
     public Task PendingTransfers => _activeQueue;
-    public event EventHandler? TransferQueued;
+    public bool IsQueuing => _isSendingFiles;
+    public event EventHandler<TransferActivity>? TransferQueued;
     private HistoryEntryViewModel? SelectedEntry => HistoryList.SelectedItem as HistoryEntryViewModel;
     public ExpandedPanel()
     {
@@ -27,17 +31,72 @@ public partial class ExpandedPanel : UserControl
         _viewModel = new HistoryViewModel(App.ServerApp.Services.GetRequiredService<HistoryIndex>());
         HistoryList.ItemsSource = _viewModel.Entries;
         SizeChanged += (_, _) => DetailsColumn.Width = ActualWidth < 700 ? new GridLength(220) : new GridLength(260);
+        SystemParameters.StaticPropertyChanged += MotionPreferenceChanged;
         RefreshHistory();
     }
-    public void RefreshHistory()
+    public void RefreshHistory() => _ = RefreshHistoryAsync();
+    public Task RefreshHistoryAsync()
     {
-        var selectedId = SelectedEntry?.Id;
-        _viewModel.Refresh();
-        if (selectedId is not null) HistoryList.SelectedItem = _viewModel.Entries.FirstOrDefault(e => e.Id == selectedId);
-        ItemCount.Text = $"{_viewModel.Entries.Count} items";
-        EmptyState.Visibility = _viewModel.Entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyLabel.Text = _viewModel.TotalCount == 0 ? "No transfers yet" : "No matching items";
-        UpdatePreview();
+        if (_closed) return Task.CompletedTask;
+        _refreshAgain = true;
+        if (!_refreshTask.IsCompleted) return _refreshTask;
+        _refreshTask = RefreshHistoryCoreAsync();
+        return _refreshTask;
+    }
+    private async Task RefreshHistoryCoreAsync()
+    {
+        try
+        {
+            while (_refreshAgain && !_closed)
+            {
+                _refreshAgain = false;
+                string? selectedId = null;
+                await _viewModel.RefreshAsync(_lifetime.Token, () => selectedId = SelectedEntry?.Id);
+                if (_closed) return;
+                if (selectedId is not null) HistoryList.SelectedItem = _viewModel.Entries.FirstOrDefault(e => e.Id == selectedId);
+                ItemCount.Text = $"{_viewModel.Entries.Count} items";
+                EmptyState.Visibility = _viewModel.Entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+                EmptyLabel.Text = _viewModel.TotalCount == 0 ? "No transfers yet" : "No matching items";
+                UpdatePreview();
+                _ = UpdateActivityThumbnailAsync();
+            }
+        }
+        catch (OperationCanceledException) when (_closed) { }
+        catch (Exception error) when (IsExpectedError(error)) { if (!_closed) TransferStatus.Text = error.Message; }
+    }
+    public void ShowActivity(TransferActivity activity)
+    {
+        ActivityStatus.Text = activity.Status;
+        ActivityDetail.Text = activity.Detail;
+        ActivityDetail.ToolTip = activity.Detail;
+        ActivityStatus.Foreground = new SolidColorBrush(activity.Outgoing ? Color.FromRgb(244, 206, 106) : Color.FromRgb(120, 221, 208));
+        ActivityRail.ShowActivity(activity);
+        _ = UpdateActivityThumbnailAsync();
+    }
+    private async Task UpdateActivityThumbnailAsync()
+    {
+        var activity = ActivityRail.Activity;
+        if (_closed || activity is null) return;
+        try
+        {
+            var thumbnail = await _viewModel.LoadActivityThumbnailAsync(activity.Items[0], _lifetime.Token);
+            if (!_closed && ReferenceEquals(ActivityRail.Activity, activity) && thumbnail is not null) ActivityRail.SetThumbnail(thumbnail);
+        }
+        catch (OperationCanceledException) when (_closed) { }
+    }
+    public void StopActivity()
+    {
+        _closed = true;
+        _lifetime.Cancel();
+        _viewModel.StopThumbnailLoading();
+        ActivityRail.Stop();
+        QueueProgress.IsIndeterminate = false;
+        SystemParameters.StaticPropertyChanged -= MotionPreferenceChanged;
+    }
+    private void MotionPreferenceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation))
+            QueueProgress.IsIndeterminate = _isSendingFiles && SystemParameters.ClientAreaAnimation;
     }
     public void ShowVault() { VaultTab.IsChecked = true; SearchInput.Focus(); }
     private void View_Changed(object sender, RoutedEventArgs e)
@@ -45,6 +104,7 @@ public partial class ExpandedPanel : UserControl
         if (TransferArea is null || _viewModel is null) return;
         var vault = VaultTab.IsChecked == true;
         TransferArea.Visibility = vault ? Visibility.Collapsed : Visibility.Visible;
+        ActivityStrip.Visibility = vault ? Visibility.Collapsed : Visibility.Visible;
         VaultFilters.Visibility = vault ? Visibility.Visible : Visibility.Collapsed;
         ListTitle.Text = vault ? "Your vault" : "Recent activity";
         PreviewMedia.MaxHeight = vault ? 190 : 110;
@@ -72,20 +132,44 @@ public partial class ExpandedPanel : UserControl
         SortButton.ToolTip = _viewModel.OldestFirst ? "Oldest first; click for newest first" : "Newest first; click for oldest first";
         RefreshHistory();
     }
-    private void SendText_Click(object sender, RoutedEventArgs e) => RunAction(() =>
+    private async void SendText_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SendTextInput.Text)) { TransferStatus.Text = "Enter a note first."; return; }
-        OutboxQueue.QueueText(App.ServerApp.Services.GetRequiredService<HistoryIndex>(), SendTextInput.Text);
-        SendTextInput.Clear();
-        Queued("Note queued for phone.");
-    });
-    private void SendClipboard_Click(object sender, RoutedEventArgs e) => RunAction(() =>
+        if (_isSendingFiles) return;
+        var text = SendTextInput.Text;
+        await QueueTextAsync(text, "Note queued for phone.");
+        if (TransferStatus.Text == "Note queued for phone." && SendTextInput.Text == text) SendTextInput.Clear();
+    }
+    private async void SendClipboard_Click(object sender, RoutedEventArgs e)
     {
-        if (!Clipboard.ContainsText() || string.IsNullOrWhiteSpace(Clipboard.GetText()))
-        { TransferStatus.Text = "No text on the clipboard."; return; }
-        OutboxQueue.QueueText(App.ServerApp.Services.GetRequiredService<HistoryIndex>(), Clipboard.GetText());
-        Queued("Clipboard text queued for phone.");
-    });
+        try
+        {
+            if (!Clipboard.ContainsText() || string.IsNullOrWhiteSpace(Clipboard.GetText()))
+            { TransferStatus.Text = "No text on the clipboard."; return; }
+            await QueueTextAsync(Clipboard.GetText(), "Clipboard text queued for phone.");
+        }
+        catch (Exception error) when (IsExpectedError(error)) { TransferStatus.Text = error.Message; }
+    }
+    private Task QueueTextAsync(string text, string message)
+    {
+        if (_isSendingFiles || _closed) return Task.CompletedTask;
+        _activeQueue = QueueTextCoreAsync(text, message);
+        return _activeQueue;
+    }
+    private async Task QueueTextCoreAsync(string text, string message)
+    {
+        _isSendingFiles = true;
+        ResendButton.IsEnabled = false;
+        TransferStatus.Text = "Queuing note...";
+        try
+        {
+            var index = App.ServerApp.Services.GetRequiredService<HistoryIndex>();
+            var item = await Task.Run(() => OutboxQueue.QueueText(index, text));
+            Queued(message, new[] { item });
+        }
+        catch (Exception error) when (IsExpectedError(error)) { TransferStatus.Text = error.Message; }
+        finally { _isSendingFiles = false; UpdatePreview(); }
+    }
     private async void ExpandedPanel_Drop(object sender, DragEventArgs e)
     {
         ResetDropZone();
@@ -104,7 +188,7 @@ public partial class ExpandedPanel : UserControl
     }
     internal Task QueueFilesAsync(IEnumerable<string> paths, string? displayName = null)
     {
-        if (_isSendingFiles) return Task.CompletedTask;
+        if (_isSendingFiles || _closed) return Task.CompletedTask;
         _activeQueue = QueueFilesCoreAsync(paths, displayName);
         return _activeQueue;
     }
@@ -116,7 +200,8 @@ public partial class ExpandedPanel : UserControl
         _isSendingFiles = true;
         ResendButton.IsEnabled = false;
         QueueProgress.Visibility = Visibility.Visible;
-        var sent = 0;
+        QueueProgress.IsIndeterminate = SystemParameters.ClientAreaAnimation;
+        var queued = new List<HistoryItem>();
         var failures = new List<string>();
         try
         {
@@ -125,25 +210,25 @@ public partial class ExpandedPanel : UserControl
                 TransferStatus.Text = $"Queuing {Path.GetFileName(path)}...";
                 try
                 {
-                    if (Directory.Exists(path)) { failures.Add("Folders cannot be sent."); continue; }
-                    await Task.Run(() => OutboxQueue.QueueFile(index, store, path, displayName));
-                    sent++;
-                    RefreshHistory();
+                    var item = await Task.Run(() =>
+                    {
+                        if (Directory.Exists(path)) throw new IOException("Folders cannot be sent.");
+                        return OutboxQueue.QueueFile(index, store, path, displayName);
+                    });
+                    queued.Add(item);
                 }
                 catch (Exception error) when (IsExpectedError(error)) { failures.Add($"{Path.GetFileName(path)}: {error.Message}"); }
             }
-            var result = failures.Count == 0 ? $"{sent} file(s) queued for phone." : $"{sent} file(s) queued. {string.Join(" ", failures)}";
-            if (sent > 0) Queued(result); else TransferStatus.Text = result;
+            var result = failures.Count == 0 ? $"{queued.Count} file(s) queued for phone." : $"{queued.Count} file(s) queued. {string.Join(" ", failures)}";
+            if (queued.Count > 0) Queued(result, queued); else TransferStatus.Text = result;
         }
-        finally { _isSendingFiles = false; QueueProgress.Visibility = Visibility.Collapsed; UpdatePreview(); }
+        finally { _isSendingFiles = false; QueueProgress.IsIndeterminate = false; QueueProgress.Visibility = Visibility.Collapsed; UpdatePreview(); }
     }
-    private void Queued(string message)
+    private void Queued(string message, IReadOnlyList<HistoryItem> items)
     {
         TransferStatus.Text = message;
         RefreshHistory();
-        DropSweep.BeginAnimation(OpacityProperty, new DoubleAnimation(0.9, 0, TimeSpan.FromMilliseconds(800)));
-        DropSweepTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, Math.Max(1, DropZone.ActualWidth), TimeSpan.FromMilliseconds(700)));
-        TransferQueued?.Invoke(this, EventArgs.Empty);
+        TransferQueued?.Invoke(this, new TransferActivity(TransferActivityKind.Queued, items));
     }
     private void Panel_DragEnter(object sender, DragEventArgs e)
     {
@@ -170,6 +255,7 @@ public partial class ExpandedPanel : UserControl
         PreviewImage.Source = entry?.Thumbnail;
         PreviewIcon.Text = entry?.Icon ?? "\uE8A5";
         PreviewIcon.Visibility = entry?.Thumbnail is null ? Visibility.Visible : Visibility.Collapsed;
+        if (entry is not null) _ = LoadSelectedThumbnailAsync(entry);
         PreviewText.Text = entry?.TextContent ?? "";
         PreviewText.Visibility = entry?.IsText == true ? Visibility.Visible : Visibility.Collapsed;
         PreviewMedia.Visibility = entry?.IsText == true ? Visibility.Collapsed : Visibility.Visible;
@@ -177,6 +263,18 @@ public partial class ExpandedPanel : UserControl
         OpenItemButton.IsEnabled = entry is not null && !entry.Missing;
         RevealButton.IsEnabled = entry is { IsText: false, Missing: false };
         ResendButton.IsEnabled = entry is not null && !entry.Missing && !_isSendingFiles;
+    }
+    private async Task LoadSelectedThumbnailAsync(HistoryEntryViewModel entry)
+    {
+        if (_closed) return;
+        try
+        {
+            await entry.EnsureThumbnailAsync(_lifetime.Token);
+            if (_closed || !ReferenceEquals(SelectedEntry, entry)) return;
+            PreviewImage.Source = entry.Thumbnail;
+            PreviewIcon.Visibility = entry.Thumbnail is null ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch (OperationCanceledException) when (_closed) { }
     }
     private void HistoryList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => OpenSelected();
     private void OpenItem_Click(object sender, RoutedEventArgs e) => OpenSelected();
@@ -196,7 +294,7 @@ public partial class ExpandedPanel : UserControl
     private async void Resend_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedEntry is not { } entry) return;
-        if (entry.IsText) RunAction(() => { OutboxQueue.QueueText(App.ServerApp.Services.GetRequiredService<HistoryIndex>(), entry.TextContent ?? ""); Queued("Note queued again."); });
+        if (entry.IsText) await QueueTextAsync(entry.TextContent ?? "", "Note queued again.");
         else if (!entry.Missing) await QueueFilesAsync(new[] { entry.FilePath! }, entry.Name);
     }
     private void Inbox_Click(object sender, RoutedEventArgs e) => RunAction(() => Process.Start(new ProcessStartInfo(App.Options.DataDirectory) { UseShellExecute = true }));

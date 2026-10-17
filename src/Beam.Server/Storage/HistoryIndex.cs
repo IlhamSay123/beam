@@ -19,7 +19,8 @@ public class HistoryIndex
         lock (_lock)
         {
             _items.Add(item);
-            Save();
+            try { Save(); }
+            catch { _items.Remove(item); throw; }
             return item;
         }
     }
@@ -49,6 +50,13 @@ public class HistoryIndex
         {
             return _items.FirstOrDefault(i => i.Id == id);
         }
+    }
+
+    public HistoryItem? GetReceivedTransfer(string transferId)
+    {
+        lock (_lock)
+            return _items.FirstOrDefault(item => item.Direction == "inbound" &&
+                string.Equals(item.TransferId, transferId, StringComparison.OrdinalIgnoreCase));
     }
 
     public bool MarkRead(string id)

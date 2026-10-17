@@ -1,6 +1,7 @@
 // src/Beam.Server/Endpoints/ReceiveEndpoints.cs
 using Beam.Server.Storage;
 using System.Text;
+using Beam.Server.Transfers;
 
 namespace Beam.Server.Endpoints;
 
@@ -9,11 +10,14 @@ public static class ReceiveEndpoints
     public static void MapReceiveEndpoints(this WebApplication app)
     {
         app.MapPost("/receive", ReceiveAsync);
+        app.MapGet("/receive/receipts/{transferId}", SafeReceiveEndpoints.GetReceipt);
     }
 
     private static async Task<IResult> ReceiveAsync(HttpRequest request, HistoryIndex index, ItemStore store,
-        BeamServerOptions options)
+        BeamServerOptions options, ReceiveCoordinator coordinator)
     {
+        if (request.Headers.ContainsKey(SafeReceiveEndpoints.TransferHeader))
+            return await SafeReceiveEndpoints.ReceiveAsync(request, index, store, options, coordinator);
         var cancellationToken = request.HttpContext.RequestAborted;
         try
         {

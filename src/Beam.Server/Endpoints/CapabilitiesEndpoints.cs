@@ -7,7 +7,8 @@ public static class CapabilitiesEndpoints
         app.MapGet("/capabilities", (BeamServerOptions options) => Results.Ok(new
         {
             maxUploadBytes = options.MaxUploadBytes,
-            maxTextBytes = options.MaxTextBytes
+            maxTextBytes = options.MaxTextBytes,
+            safeRetryVersion = 1
         }));
     }
 }

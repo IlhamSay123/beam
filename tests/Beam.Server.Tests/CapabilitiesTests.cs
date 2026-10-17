@@ -30,7 +30,8 @@ public class CapabilitiesTests
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(uploadLimit, json.RootElement.GetProperty("maxUploadBytes").GetInt64());
         Assert.Equal(textLimit, json.RootElement.GetProperty("maxTextBytes").GetInt32());
-        Assert.Equal(2, json.RootElement.EnumerateObject().Count());
+        Assert.Equal(1, json.RootElement.GetProperty("safeRetryVersion").GetInt32());
+        Assert.Equal(3, json.RootElement.EnumerateObject().Count());
     }
 
     [Theory]

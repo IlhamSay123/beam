@@ -9,8 +9,9 @@ let server, browser, origin;
 const webroot = path.resolve(__dirname, '../../src/Beam.Server/wwwroot');
 before(async () => {
   server = http.createServer(async (request, response) => {
+    if (request.url === '/connection/heartbeat') return response.writeHead(204).end();
     const filename = new URL(request.url, 'http://localhost').pathname.split('/').pop() || 'index.html';
-    const types = { 'index.html': 'text/html', 'app.js': 'text/javascript', 'styles.css': 'text/css' };
+    const types = { 'index.html': 'text/html', 'app.js': 'text/javascript', 'vault.js': 'text/javascript', 'motion.js': 'text/javascript', 'lucide.min.js': 'text/javascript', 'styles.css': 'text/css' };
     if (!types[filename]) { response.writeHead(404).end(); return; }
     response.writeHead(200, { 'Content-Type': types[filename] });
     response.end(await fs.readFile(path.join(webroot, filename)));

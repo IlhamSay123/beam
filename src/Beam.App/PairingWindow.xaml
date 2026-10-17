@@ -1,20 +1,58 @@
 <Window x:Class="Beam.App.PairingWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pair Beam" Height="390" Width="600" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Background="#141618">
+        Title="Pair Beam" Height="660" Width="700" MinWidth="600" MinHeight="560"
+        WindowStartupLocation="CenterScreen" Background="#141618">
     <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="BeamTheme.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
-    <Grid Margin="24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <TextBlock Text="Pair phone" FontSize="26" FontWeight="SemiBold" Margin="0,0,0,24"/>
-        <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Border Background="White" Padding="10" VerticalAlignment="Top"><Image x:Name="QrImage" Width="200" Height="200"/></Border>
-            <StackPanel Grid.Column="2">
-                <TextBlock Text="LOCAL ADDRESS" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
-                <TextBlock x:Name="HostText" FontSize="15" TextWrapping="Wrap" Margin="0,0,0,20"/>
-                <TextBlock Text="PAIRING TOKEN" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
-                <TextBox x:Name="TokenText" IsReadOnly="True" TextWrapping="Wrap" FontSize="13"/>
-                <Button Click="CopyToken_Click" Margin="0,10,0,8"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Copy token"/></StackPanel></Button>
-                <Button Click="CopyLink_Click"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE71B;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Copy pairing link"/></StackPanel></Button>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="{StaticResource CanvasBrush}">
+        <Grid Margin="24">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <TextBlock Text="Pair phone" FontSize="26" FontWeight="SemiBold" Margin="0,0,0,20"/>
+            <Grid Grid.Row="1" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="LAN ADAPTER" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="AdapterSelector" SelectionChanged="Adapter_Changed" AutomationProperties.Name="LAN adapter">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+                <Button x:Name="RefreshButton" Grid.Column="1" Content="&#xE72C;" Style="{StaticResource IconButton}" Click="Refresh_Click" VerticalAlignment="Bottom" Margin="8,0,0,0" ToolTip="Refresh LAN adapters" AutomationProperties.Name="Refresh adapters"/>
+            </Grid>
+            <Grid Grid.Row="2" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid Width="220" Height="220" VerticalAlignment="Top">
+                    <Border x:Name="QrBorder" Background="White" Padding="10"><Image x:Name="QrImage" Width="200" Height="200" AutomationProperties.Name="Phone pairing QR code"/></Border>
+                    <TextBlock x:Name="OfflineText" Text="No active LAN IPv4 address" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" Margin="16" Visibility="Collapsed" Foreground="{StaticResource MutedBrush}"/>
+                </Grid>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="LOCAL ADDRESS" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="HostText" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                    <Button x:Name="CopyAddressButton" Click="CopyAddress_Click" Content="&#xE8C8;" Style="{StaticResource IconButton}" HorizontalAlignment="Left" ToolTip="Copy manual address" AutomationProperties.Name="Copy manual address" Margin="0,0,0,8"/>
+                    <TextBlock Text="PAIRING TOKEN" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                    <TextBox x:Name="TokenText" IsReadOnly="True" TextWrapping="Wrap" FontSize="13" AutomationProperties.Name="Pairing token"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button x:Name="CopyTokenButton" Click="CopyToken_Click" Content="&#xE8C8;" Style="{StaticResource IconButton}" ToolTip="Copy pairing token" AutomationProperties.Name="Copy token"/>
+                        <Button x:Name="CopyLinkButton" Click="CopyLink_Click" Content="&#xE71B;" Style="{StaticResource IconButton}" ToolTip="Copy pairing link" AutomationProperties.Name="Copy pairing link"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+            <StackPanel Grid.Row="3" Margin="0,0,0,16">
+                <TextBlock Text="CONNECTION CHECKS" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock x:Name="AdapterStatus" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                <TextBlock x:Name="LocalStatus" Text="Local HTTP not checked" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                <TextBlock x:Name="BrowserStatus" TextWrapping="Wrap" Margin="0,0,0,5" AutomationProperties.LiveSetting="Polite"/>
+                <TextBlock x:Name="LastSeenText" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Text="Use the same reachable local network. If Safari cannot open Beam, check VPN, router isolation and Windows private-network firewall permission. Local checks cannot verify these remote settings."
+                           Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"/>
             </StackPanel>
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="CheckButton" Click="Check_Click"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Check connection"/></StackPanel></Button>
+                    <Button x:Name="DiagnosticsButton" Click="Diagnostics_Click" Content="&#xE8C8;" Style="{StaticResource IconButton}" ToolTip="Copy redacted diagnostics" AutomationProperties.Name="Copy diagnostics" Margin="8,0,0,0"/>
+                </StackPanel>
+                <Button x:Name="LaterButton" Grid.Column="1" Content="Set up later" Click="Later_Click"/>
+            </Grid>
         </Grid>
-    </Grid>
+    </ScrollViewer>
 </Window>

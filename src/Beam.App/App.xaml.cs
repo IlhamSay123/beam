@@ -13,6 +13,7 @@ public partial class App : Application
     public static MdnsAdvertiser Advertiser { get; } = new();
 
     private TrayIconService? _trayIconService;
+    private static PairingWindow? _pairingWindow;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -20,28 +21,57 @@ public partial class App : Application
 
         var dataDirectory = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Beam");
-        var token = PairingToken.LoadOrCreate(dataDirectory);
-        Options = new BeamServerOptions(dataDirectory, token, Port: 8787);
+        try
+        {
+            var token = PairingToken.LoadOrCreate(dataDirectory);
+            Options = new BeamServerOptions(dataDirectory, token, Port: 8787);
+            ServerApp = BeamServerHost.Build(Options);
+            if (!await TryStartServerAsync(ServerApp, Options.Port,
+                message => MessageBox.Show(message, "Beam could not start", MessageBoxButton.OK, MessageBoxImage.Warning)))
+            {
+                ServerApp = null!;
+                Shutdown(1);
+                return;
+            }
+            Advertiser.Start(Options.Port);
+            _trayIconService = new TrayIconService();
+            _trayIconService.Initialize();
+            var setupDirectory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Beam");
+            if (new SetupMarker(setupDirectory).TryClaimOffer()) ShowPairing();
+        }
+        catch (Exception)
+        {
+            MessageBox.Show("Beam could not start. Close any other Beam instance, check that your Documents folder is available, and try again.",
+                "Beam could not start", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Shutdown(1);
+        }
+    }
 
-        ServerApp = BeamServerHost.Build(Options);
-        await ServerApp.StartAsync();
-
-        Advertiser.Start(Options.Port);
-
-        _trayIconService = new TrayIconService();
-        _trayIconService.Initialize();
+    public static async Task<bool> TryStartServerAsync(WebApplication server, int port, Action<string> reportFailure)
+    {
+        try { await server.StartAsync(); return true; }
+        catch (Exception)
+        {
+            try { await server.DisposeAsync(); } catch (Exception) { }
+            reportFailure($"Beam could not listen on port {port}. Close any other Beam instance or app using this port, then reopen Beam. No firewall settings were changed.");
+            return false;
+        }
     }
 
     public static void ShowPairing()
     {
-        var host = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
-            .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
-                && n.NetworkInterfaceType is System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211 or System.Net.NetworkInformation.NetworkInterfaceType.Ethernet)
-            .OrderByDescending(n => n.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211)
-            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
-            .Select(a => a.Address)
-            .FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(a));
-        new PairingWindow(host?.ToString() ?? Advertiser.HostName ?? "beam-pc.local", Options.Port, Options.ExpectedToken).Show();
+        var owner = Current.MainWindow;
+        if (owner?.WindowState == WindowState.Minimized) owner.WindowState = WindowState.Normal;
+        if (_pairingWindow is not null)
+        {
+            if (_pairingWindow.WindowState == WindowState.Minimized) _pairingWindow.WindowState = WindowState.Normal;
+            _pairingWindow.Show();
+            _pairingWindow.Activate();
+            return;
+        }
+        _pairingWindow = new PairingWindow(Options.Port, Options.ExpectedToken) { Owner = owner };
+        _pairingWindow.Closed += (_, _) => _pairingWindow = null;
+        _pairingWindow.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -59,7 +89,7 @@ public partial class App : Application
                     await ServerApp.DisposeAsync();
                 }).GetAwaiter().GetResult();
             }
-            catch (OperationCanceledException) { }
+            catch (Exception) { }
         }
         base.OnExit(e);
     }

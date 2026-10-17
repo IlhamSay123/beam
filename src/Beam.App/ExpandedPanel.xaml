@@ -1,9 +1,9 @@
-<UserControl x:Class="Beam.App.ExpandedPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+<UserControl x:Class="Beam.App.ExpandedPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Beam.App"
              AllowDrop="True" Drop="ExpandedPanel_Drop" DragEnter="Panel_DragEnter" DragLeave="Panel_DragLeave">
     <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="BeamTheme.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
-    <Grid Margin="24,0,24,20">
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <Grid Margin="0,0,0,22">
+    <Grid Margin="24,0,24,16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="TransferTab" Content="Transfer" GroupName="Views" Style="{StaticResource NavButton}" IsChecked="True" Checked="View_Changed"/>
@@ -11,9 +11,9 @@
             </StackPanel>
             <Button Grid.Column="1" Click="Pair_Click" ToolTip="Pair your phone"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xED14;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Pair phone"/></StackPanel></Button>
         </Grid>
-        <Grid x:Name="TransferArea" Grid.Row="1" Margin="0,0,0,24">
+        <Grid x:Name="TransferArea" Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Border x:Name="DropZone" BorderBrush="#487874" BorderThickness="1" CornerRadius="6" Background="#1D282A" MinHeight="152" MouseLeftButtonUp="DropZone_Click" Cursor="Hand" ToolTip="Choose files to send">
+            <Border x:Name="DropZone" BorderBrush="#487874" BorderThickness="1" CornerRadius="6" Background="#1D282A" MinHeight="136" MouseLeftButtonUp="DropZone_Click" Cursor="Hand" ToolTip="Choose files to send">
                 <Grid ClipToBounds="True">
                     <Rectangle Width="3" Height="94" Fill="{StaticResource BeamBrush}" HorizontalAlignment="Left" Margin="24,0,0,0" Opacity="0.85"/>
                     <StackPanel VerticalAlignment="Center" Margin="50,20,20,20">
@@ -21,7 +21,6 @@
                         <TextBlock x:Name="DropTitle" Text="Send files" FontSize="22" FontWeight="SemiBold"/>
                         <TextBlock Text="To phone" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/>
                     </StackPanel>
-                    <Rectangle x:Name="DropSweep" Width="2" Fill="#F4CE6A" HorizontalAlignment="Left" Opacity="0" IsHitTestVisible="False"><Rectangle.RenderTransform><TranslateTransform x:Name="DropSweepTransform"/></Rectangle.RenderTransform></Rectangle>
                 </Grid>
             </Border>
             <Grid Grid.Column="2">
@@ -34,7 +33,20 @@
                 </Grid>
             </Grid>
         </Grid>
-        <Grid Grid.Row="2">
+        <Grid x:Name="ActivityStrip" Grid.Row="2" Height="70" Margin="0,0,0,10" AutomationProperties.LiveSetting="Polite">
+            <Grid.RowDefinitions><RowDefinition Height="20"/><RowDefinition Height="34"/><RowDefinition Height="16"/></Grid.RowDefinitions>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <TextBlock x:Name="ActivityStatus" Text="Ready" FontSize="12" Foreground="{StaticResource BeamBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="ActivityDetail" Grid.Column="1" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" TextAlignment="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </Grid>
+            <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE7F8;" FontFamily="Segoe MDL2 Assets" FontSize="17" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                <local:TransferMotionView x:Name="ActivityRail" Grid.Column="1" Height="30" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="17" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid Grid.Row="2"><TextBlock Text="This PC" FontSize="10" Foreground="{StaticResource MutedBrush}"/><TextBlock Text="Phone" FontSize="10" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right"/></Grid>
+        </Grid>
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="22"/><ColumnDefinition x:Name="DetailsColumn" Width="260"/></Grid.ColumnDefinitions>
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
@@ -56,12 +68,12 @@
                     </Grid>
                 </Grid>
                 <Grid Grid.Row="2">
-                    <ListBox x:Name="HistoryList" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="HistoryList_SelectionChanged" MouseDoubleClick="HistoryList_MouseDoubleClick">
+                    <ListBox x:Name="HistoryList" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" SelectionChanged="HistoryList_SelectionChanged" MouseDoubleClick="HistoryList_MouseDoubleClick">
                         <ListBox.ItemTemplate><DataTemplate><Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <Border Width="34" Height="38" Background="#323B3E" CornerRadius="4" HorizontalAlignment="Left"><Grid><TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="17" Foreground="{StaticResource BeamBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/><Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/></Grid></Border>
                             <StackPanel Grid.Column="1" Margin="0,0,12,0" VerticalAlignment="Center"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/><TextBlock Text="{Binding Subtitle}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/></StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding State}" Foreground="{Binding StateBrush}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="{Binding State}" ToolTip="{Binding State}" MaxWidth="150" TextTrimming="CharacterEllipsis" Foreground="{Binding StateBrush}" FontSize="11" VerticalAlignment="Center"/>
                         </Grid></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
                     <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed"><TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource MutedBrush}" FontSize="28" HorizontalAlignment="Center" Margin="0,0,0,12"/><TextBlock x:Name="EmptyLabel" Text="No transfers yet" Foreground="{StaticResource MutedBrush}"/></StackPanel>
@@ -84,9 +96,9 @@
                 </Grid>
             </Grid>
         </Grid>
-        <Grid Grid.Row="3" Margin="0,14,0,0">
+        <Grid Grid.Row="4" Margin="0,10,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <StackPanel><ProgressBar x:Name="QueueProgress" Height="2" IsIndeterminate="True" Foreground="{StaticResource BeamBrush}" Visibility="Collapsed" Background="#333A3F" Margin="0,0,12,8"/><TextBlock x:Name="TransferStatus" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" MaxHeight="42" Text="Ready"/></StackPanel>
+            <StackPanel><ProgressBar x:Name="QueueProgress" Height="2" IsIndeterminate="False" Foreground="{StaticResource BeamBrush}" Visibility="Collapsed" Background="#333A3F" Margin="0,0,12,8"/><TextBlock x:Name="TransferStatus" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" MaxHeight="42" Text="Ready"/></StackPanel>
             <Button Grid.Column="1" Content="&#xE8B7;" Style="{StaticResource IconButton}" Click="Inbox_Click" ToolTip="Open Beam storage folder"/>
         </Grid>
     </Grid>

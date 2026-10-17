@@ -12,4 +12,6 @@ public class HistoryItem
     public bool IsText { get; init; }
     public string? TextContent { get; init; }
     public string? FilePath { get; init; }
+    public string? TransferId { get; init; }
+    public string? TransferFingerprint { get; init; }
 }

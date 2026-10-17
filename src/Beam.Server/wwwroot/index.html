@@ -6,7 +6,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="referrer" content="no-referrer" />
   <meta name="theme-color" content="#141618" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <title>Beam</title>
 </head>
 <body>
@@ -14,17 +14,32 @@
     <div class="brand"><span class="beam-mark" aria-hidden="true"><i></i><i></i><i></i></span><h1>Beam</h1></div>
     <span id="connectionStatus" class="header-label" role="status">Pairing needed</span>
   </header>
+  <div id="connectionNotice" class="connection-notice" hidden>
+    <p id="connectionMessage" role="status" aria-live="polite"></p>
+    <button id="retryConnection" type="button" class="quiet"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>Retry connection</span></button>
+  </div>
   <div id="setup" hidden>
     <label for="tokenInput">PC token</label>
-    <input id="tokenInput" type="text" placeholder="Paste token from pairing screen" />
-    <button id="saveTokenButton">Save</button>
-    <p id="tokenError" hidden>Wrong token &mdash; check for typos and try again.</p>
+    <input id="tokenInput" type="text" placeholder="Paste token from pairing screen" aria-describedby="tokenError" autocapitalize="none" spellcheck="false" />
+    <button id="saveTokenButton">Pair</button>
+    <p id="tokenError" role="status" hidden>Pairing is no longer accepted by this PC. Open Pair phone in Beam and scan its QR code or paste the current token.</p>
   </div>
   <main id="transferShell" hidden>
     <nav class="tabs" role="tablist" aria-label="Transfer direction">
       <button id="receiveTab" role="tab" aria-selected="true" aria-controls="receivePanel">Receive<span id="receiveCount" aria-hidden="true"></span></button>
       <button id="sendTab" role="tab" aria-selected="false" aria-controls="sendPanel" tabindex="-1">Send</button>
+      <button id="vaultTab" role="tab" aria-selected="false" aria-controls="vaultPanel" tabindex="-1">Vault</button>
     </nav>
+    <section id="motionPanel" class="motion-panel" data-direction="outgoing" data-phase="idle" aria-label="Transfer activity">
+      <div class="motion-heading"><span id="motionState">Ready to beam</span><span id="motionProgress">Standby</span></div>
+      <div class="motion-lane" role="img" aria-label="Phone and PC transfer activity">
+        <span class="motion-endpoint"><i data-lucide="smartphone" aria-hidden="true"></i></span>
+        <div class="motion-track"><div class="motion-rail"><span id="motionFill"></span></div><div class="motion-packet" aria-hidden="true"><i data-lucide="file" aria-hidden="true"></i></div></div>
+        <span class="motion-endpoint"><i data-lucide="monitor" aria-hidden="true"></i></span>
+      </div>
+      <div class="motion-endpoints"><span>This iPhone</span><span>Your PC</span></div>
+      <div class="motion-meta"><span id="motionName">Beam</span><span id="motionDetail"></span></div>
+    </section>
     <section id="receivePanel" role="tabpanel" aria-labelledby="receiveTab">
       <div class="section-heading"><h2>From PC</h2></div>
       <p id="status" role="status" aria-live="polite"></p>
@@ -34,8 +49,8 @@
     <section id="sendPanel" role="tabpanel" aria-labelledby="sendTab" hidden>
       <div class="section-heading"><h2>To PC</h2><span id="uploadLimit" class="muted"></span></div>
       <div class="file-actions">
-        <label class="picker"><span>Choose files</span><input id="fileInput" type="file" multiple aria-label="Choose files" disabled /></label>
-        <label class="picker"><span>Photos &amp; videos</span><input id="photoInput" type="file" multiple accept="image/*,video/*" aria-label="Choose photos and videos" disabled /></label>
+        <label class="picker"><i data-lucide="files" aria-hidden="true"></i><span>Choose files</span><input id="fileInput" type="file" multiple aria-label="Choose files" disabled /></label>
+        <label class="picker"><i data-lucide="images" aria-hidden="true"></i><span>Photos &amp; videos</span><input id="photoInput" type="file" multiple accept="image/*,video/*" aria-label="Choose photos and videos" disabled /></label>
       </div>
       <form id="noteForm">
         <label for="noteInput">Note or link</label>
@@ -49,7 +64,23 @@
         <ul id="uploadList"></ul>
       </section>
     </section>
+    <section id="vaultPanel" role="tabpanel" aria-labelledby="vaultTab" hidden>
+      <div class="section-heading"><h2>Your vault</h2><button id="vaultRefresh" type="button" class="tool-button" aria-label="Refresh vault" title="Refresh vault"><i data-lucide="refresh-cw" aria-hidden="true"></i></button></div>
+      <label class="vault-search"><i data-lucide="search" aria-hidden="true"></i><input id="vaultSearch" type="search" aria-label="Search vault" placeholder="Search filenames and notes" autocomplete="off" /></label>
+      <div class="vault-filters">
+        <select id="vaultDirection" aria-label="Vault direction"><option value="">Both directions</option><option value="outbound">Received from PC</option><option value="inbound">Sent to PC</option></select>
+        <select id="vaultKind" aria-label="Vault file type"><option value="">All types</option><option value="image">Images</option><option value="file">Files</option><option value="text">Notes &amp; links</option></select>
+      </div>
+      <div class="vault-summary"><span id="vaultCount" class="muted"></span><span class="muted">Stored on your PC</span></div>
+      <p id="vaultStatus" role="status" aria-live="polite"></p>
+      <p id="vaultEmpty" class="vault-empty" hidden>No beams yet.</p>
+      <ul id="vaultItems"></ul>
+      <button id="vaultMore" type="button" class="quiet" hidden>Load more</button>
+    </section>
   </main>
-  <script src="app.js?v=5"></script>
+  <script src="lucide.min.js?v=8"></script>
+  <script src="motion.js?v=8"></script>
+  <script src="app.js?v=8"></script>
+  <script src="vault.js?v=8"></script>
 </body>
 </html>

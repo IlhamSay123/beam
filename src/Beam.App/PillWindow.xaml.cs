@@ -2,11 +2,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using Beam.Server.Storage;
+using Beam.Server.Connection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Toolkit.Uwp.Notifications;
 
@@ -15,25 +15,37 @@ namespace Beam.App;
 public partial class PillWindow : Window
 {
     private readonly DispatcherTimer _pollTimer = new() { Interval = TimeSpan.FromSeconds(2) };
-    private readonly HashSet<string> _seenInboundIds = new();
+    private readonly DispatcherTimer _activityTimer = new() { Interval = TimeSpan.FromSeconds(2.8) };
+    private readonly TransferActivityTracker _activities = new();
+    private readonly List<TransferActivity> _waitingActivities = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly Task _seedHistory;
+    private Task _pollTask = Task.CompletedTask;
+    private TransferActivity? _currentActivity;
+    private int _queuedCount;
+    private bool _closed;
     private readonly HistoryIndex _index;
+    private readonly ConnectionPresence _presence;
     private readonly ExpandedPanel _panel;
     private Rect _workspaceBounds;
     private Point _pillPosition;
     private Point? _dragStart;
     private bool _dragged;
-    private DateTimeOffset _lastActivity;
     private bool _closingAfterQueue;
     public bool IsPillMode { get; private set; }
     public ExpandedPanel Panel => _panel;
+    public event EventHandler<TransferActivity>? ActivityObserved;
 
     public PillWindow()
     {
         InitializeComponent();
         _index = App.ServerApp.Services.GetRequiredService<HistoryIndex>();
+        _presence = App.ServerApp.Services.GetRequiredService<ConnectionPresence>();
+        _seedHistory = SeedHistoryAsync();
         _panel = new ExpandedPanel();
-        _panel.TransferQueued += (_, _) => Pulse("Queued");
+        _panel.TransferQueued += TransferQueued;
         ContentHost.Children.Add(_panel);
+        RefreshConnectionStatus();
         var area = SystemParameters.WorkArea;
         Width = Math.Min(980, area.Width);
         Height = Math.Min(700, area.Height);
@@ -43,8 +55,8 @@ public partial class PillWindow : Window
         Top = area.Top + Math.Max(0, (area.Height - Height) / 2);
         _workspaceBounds = new Rect(Left, Top, Width, Height);
         _pillPosition = new Point(area.Right - 188, area.Bottom - 76);
-        foreach (var item in _index.List().Where(i => i.Direction == "inbound")) _seenInboundIds.Add(item.Id);
-        _pollTimer.Tick += Poll;
+        _activityTimer.Tick += (_, _) => ShowNextActivity();
+        _pollTimer.Tick += async (_, _) => await PollHistoryAsync();
         _pollTimer.Start();
         Closing += async (_, e) =>
         {
@@ -52,7 +64,9 @@ public partial class PillWindow : Window
             e.Cancel = true;
             if (_closingAfterQueue) return;
             _closingAfterQueue = true;
+            _activityTimer.Stop();
             _panel.IsEnabled = false;
+            PillTitle.Text = "Beam";
             PillStatus.Text = "Finishing transfer";
             ServerStatus.Text = "Finishing queued files...";
             try { await _panel.PendingTransfers; }
@@ -60,44 +74,119 @@ public partial class PillWindow : Window
         };
         Closed += (_, _) =>
         {
+            _closed = true;
+            _lifetime.Cancel();
             _pollTimer.Stop();
+            _activityTimer.Stop();
+            _waitingActivities.Clear();
+            _panel.TransferQueued -= TransferQueued;
+            _panel.StopActivity();
+            PillRail.Stop();
             if (Application.Current is App) Application.Current.Shutdown();
         };
     }
-    private void Poll(object? sender, EventArgs e)
+    private async Task SeedHistoryAsync()
     {
-        var items = _index.List();
-        var received = items.Where(i => i.Direction == "inbound" && !_seenInboundIds.Contains(i.Id)).ToList();
-        foreach (var item in received) _seenInboundIds.Add(item.Id);
-        if (received.Count > 0) NotifyInboundReceived(received);
-        _panel.RefreshHistory();
-        var queued = items.Count(i => i.Direction == "outbound" && !i.Read);
-        if (DateTimeOffset.UtcNow - _lastActivity > TimeSpan.FromSeconds(5))
-            PillStatus.Text = queued > 0 ? $"{queued} queued" : "Ready";
-        ServerStatus.Text = queued > 0 ? $"LAN ready / {queued} queued" : "LAN ready";
+        var items = await Task.Run(() => _index.List().Select(TransferActivity.Snapshot).ToArray());
+        if (!_closed) _activities.Seed(items);
     }
-    public void NotifyInboundReceived(IReadOnlyList<HistoryItem> items)
+    public Task PollHistoryAsync()
     {
-        Pulse(items.Count > 1 ? $"{items.Count} received" : "Received");
+        if (_closed || _closingAfterQueue) return Task.CompletedTask;
+        RefreshConnectionStatus();
+        if (!_pollTask.IsCompleted) return _pollTask;
+        _pollTask = PollHistoryCoreAsync();
+        return _pollTask;
+    }
+    private async Task PollHistoryCoreAsync()
+    {
+        try
+        {
+            await _seedHistory;
+            if (_closed || _closingAfterQueue) return;
+            var items = await Task.Run(() => _index.List().Select(TransferActivity.Snapshot).ToArray(), _lifetime.Token);
+            if (_closed || _closingAfterQueue) return;
+            foreach (var activity in _activities.Observe(items, _panel.IsQueuing)) PublishActivity(activity);
+            _queuedCount = items.Count(i => i.Direction == "outbound" && !i.Read);
+            RefreshConnectionStatus();
+            await _panel.RefreshHistoryAsync();
+        }
+        catch (OperationCanceledException) when (_closed) { }
+    }
+    private async void TransferQueued(object? sender, TransferActivity activity)
+    {
+        await _seedHistory;
+        if (_closed || _closingAfterQueue) return;
+        foreach (var queued in _activities.RecordQueued(activity.Items)) PublishActivity(queued);
+    }
+    private void PublishActivity(TransferActivity activity)
+    {
+        ActivityObserved?.Invoke(this, activity);
+        if (activity.Kind == TransferActivityKind.Received) NotifyInboundReceived(activity.Items);
+        if (_currentActivity is null) ShowActivity(activity);
+        else
+        {
+            var same = _waitingActivities.FindIndex(a => a.Kind == activity.Kind && a.Status == activity.Status);
+            if (same >= 0) _waitingActivities[same] = new TransferActivity(activity.Kind, _waitingActivities[same].Items.Concat(activity.Items));
+            else _waitingActivities.Add(activity);
+        }
+    }
+    private void ShowActivity(TransferActivity activity)
+    {
+        _currentActivity = activity;
+        PillTitle.Text = activity.PillStatus;
+        PillStatus.Text = activity.Detail;
+        PillRoot.ToolTip = $"{activity.Status}\n{activity.Detail}";
+        PillKind.Text = TransferSymbol.For(activity.Items[0]);
+        PillKind.Foreground = new SolidColorBrush(activity.Outgoing ? Color.FromRgb(244, 206, 106) : Color.FromRgb(120, 221, 208));
+        System.Windows.Automation.AutomationProperties.SetName(PillRoot, $"{activity.Status}. {activity.Detail}");
+        PillRail.ShowActivity(activity);
+        _panel.ShowActivity(activity);
+        _activityTimer.Stop();
+        _activityTimer.Start();
+    }
+    private void ShowNextActivity()
+    {
+        _activityTimer.Stop();
+        if (_closed || _closingAfterQueue) return;
+        if (_waitingActivities.Count > 0)
+        {
+            var next = _waitingActivities[0];
+            _waitingActivities.RemoveAt(0);
+            ShowActivity(next);
+        }
+        else { _currentActivity = null; ShowIdleStatus(); }
+    }
+    private void ShowIdleStatus()
+    {
+        var connection = ConnectionStatus.Describe(_presence.Snapshot());
+        PillTitle.Text = "Beam";
+        PillStatus.Text = _queuedCount > 0 ? $"{_queuedCount} queued for phone" : connection.Pill;
+        PillRoot.ToolTip = $"{connection.Pill}\n{connection.Detail}";
+        PillKind.Text = "\uE898";
+        PillKind.Foreground = (Brush)FindResource("BeamBrush");
+        System.Windows.Automation.AutomationProperties.SetName(PillRoot, $"Beam. {PillStatus.Text}");
+        PillRail.ClearActivity();
+    }
+    private void RefreshConnectionStatus()
+    {
+        var connection = ConnectionStatus.Describe(_presence.Snapshot());
+        ServerStatus.Text = connection.Header + (_queuedCount > 0 ? $" / {_queuedCount} queued" : "");
+        ServerStatus.ToolTip = connection.Detail;
+        System.Windows.Automation.AutomationProperties.SetName(ServerStatus, $"{ServerStatus.Text}. {connection.Detail}");
+        if (_currentActivity is null) ShowIdleStatus();
+    }
+    private static void NotifyInboundReceived(IReadOnlyList<HistoryItem> items)
+    {
         try
         {
             new ToastContentBuilder().AddText("Beam")
                 .AddText(items.Count > 1 ? $"{items.Count} items received" : items[0].IsText ? "New note received" : "New file received").Show();
         }
-        catch (Exception error) when (error is InvalidOperationException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+        catch (Exception error) when (error is InvalidOperationException or COMException or UnauthorizedAccessException)
         {
             // Windows notifications are optional; receiving and refreshing must still work.
         }
-        _panel.RefreshHistory();
-    }
-    public void Pulse(string status)
-    {
-        _lastActivity = DateTimeOffset.UtcNow;
-        PillStatus.Text = status;
-        SignalLine.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(1100)));
-        SignalTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-110, Width, TimeSpan.FromMilliseconds(950)));
-        RootBorderBrush.BeginAnimation(SolidColorBrush.ColorProperty,
-            new ColorAnimation(Color.FromRgb(120, 221, 208), Color.FromRgb(60, 72, 75), TimeSpan.FromMilliseconds(1200)));
     }
     public void OpenWorkspace(bool vault = false)
     {
