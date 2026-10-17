@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       - run: dotnet restore Beam.sln
       - run: dotnet build Beam.sln --configuration Release --no-restore
       - run: dotnet test tests/Beam.Server.Tests/Beam.Server.Tests.csproj --configuration Release --no-build
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

@@ -274,7 +274,7 @@ public class ReceiveEndpointsTests
 
         response.EnsureSuccessStatusCode();
         var items = new HistoryIndex(Path.Combine(options.DataDirectory, "history.json")).List();
-        var item = Assert.Single(items.Where(item => item.IsText));
+        var item = Assert.Single(items, item => item.IsText);
         Assert.Equal(text, item.TextContent);
         Assert.Equal(65536, item.SizeBytes);
     }
@@ -422,7 +422,7 @@ public class ReceiveEndpointsTests
             var items = index.List();
             Assert.Equal(3, items.Count);
             Assert.Equal(2, items.Count(i => !i.IsText));
-            Assert.Single(items.Where(i => i.IsText && i.TextContent == "call mom"));
+            Assert.Single(items, i => i.IsText && i.TextContent == "call mom");
         }
         finally
         {

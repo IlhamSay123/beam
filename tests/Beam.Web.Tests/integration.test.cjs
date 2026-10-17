@@ -10,7 +10,7 @@ const { chromium, webkit } = require('playwright');
 let child, browser, origin, directory;
 before(async () => {
   directory = await fs.mkdtemp(path.join(os.tmpdir(), 'beam-browser-'));
-  const dll = path.resolve(__dirname, '../Beam.Web.Host/bin/Release/net8.0/Beam.Web.Host.dll');
+  const dll = path.resolve(__dirname, '../Beam.Web.Host/bin/Release/net10.0/Beam.Web.Host.dll');
   await fs.access(dll).catch(() => { throw new Error('Build tests/Beam.Web.Host/Beam.Web.Host.csproj --configuration Release before npm test.'); });
   child = spawn('dotnet', [dll, directory], { stdio: ['pipe', 'pipe', 'pipe'] });
   origin = await new Promise((resolve, reject) => {

@@ -2,10 +2,17 @@
 
 ## Local Workflow
 
-Use Windows and .NET 8 for desktop work. The WPF application hosts the configured
+Use Windows and a stable .NET 10 SDK for desktop work. global.json selects the
+latest installed stable .NET 10 feature band; a runtime alone cannot build Beam.
+The WPF application hosts the configured
 server; the standalone server Program.cs is not the application entry point.
 For web regression tests, install Node.js 22+ and Microsoft Edge, then run
 `npm ci` in tests/Beam.Web.Tests.
+
+NuGet audits direct and transitive dependencies during restore. Vulnerability
+findings fail restore/build through Directory.Build.props; do not suppress them.
+If using a portable SDK folder, put it on PATH and set DOTNET_ROOT for the current
+shell so browser integration tests spawn the same dotnet host.
 
 Before proposing a change:
 
@@ -13,6 +20,7 @@ Before proposing a change:
 dotnet build Beam.sln --configuration Release
 dotnet test tests/Beam.Server.Tests/Beam.Server.Tests.csproj --configuration Release
 dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj --configuration Release
+dotnet build tests/Beam.Web.Host/Beam.Web.Host.csproj --configuration Release
 Push-Location tests/Beam.Web.Tests
 npm ci
 npm test

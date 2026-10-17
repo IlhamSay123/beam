@@ -23,8 +23,9 @@ required for files, photos, videos, notes or links.
 Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
 .NET installation is required. This remains an unsigned trusted-LAN alpha.
 
-The phone Vault, file-type motion, connection/setup polish and safe Safari
-retries are newer source changes, not part of the downloadable alpha.1 release yet.
+Current source targets .NET 10. The downloadable alpha.1 ZIP still bundles .NET 8.
+Phone Vault, file-type motion, connection/setup polish, safe Safari retries and
+the runtime/dependency upgrades are newer source changes awaiting a new release.
 
 <img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
 
@@ -58,7 +59,7 @@ retries are newer source changes, not part of the downloadable alpha.1 release y
 ## Requirements
 
 - Windows 10/11 for the WPF desktop app.
-- .NET 8 SDK to build and run from source; the self-contained ZIP needs no .NET installation.
+- .NET 10 SDK to build and run from source; the self-contained ZIP needs no .NET installation.
 - An iPhone with Safari or another browser. No App Store installation or Shortcut is needed.
 - A local network that allows the phone to connect to the PC on TCP port `8787`.
 - Node.js 22+ and Microsoft Edge for the browser test suite, or another installed
@@ -334,7 +335,7 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 ## Next Improvements
 
 - Original filename metadata for the optional Shortcut (Safari already preserves its picker filenames).
-- Migrate from .NET 8 before its end of support; this milestone still targets .NET 8.
+- Keep the .NET 10 runtime and dependencies patched; restores fail on known vulnerable direct or transitive packages.
 - Durable phone queues and chunk-resumable large transfers (current retries reuse whole retained files).
 - Favorites/pinning and optional storage cleanup controls.
 - Better network diagnostics and device connection visibility.

@@ -205,7 +205,7 @@ public class SafeRetryTests
         Assert.Equal(id, (await Ids(replay)).Single());
         Assert.Equal(2, restarted.Index.List().Count);
         Assert.Equal(2, Directory.GetFiles(restarted.Store.InboxDir).Length);
-        Assert.Single(restarted.Index.List().Where(item => item.TransferId is null));
+        Assert.Single(restarted.Index.List(), item => item.TransferId is null);
     }
 
     [Fact]

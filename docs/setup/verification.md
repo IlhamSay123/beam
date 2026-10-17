@@ -2,6 +2,23 @@
 
 ## Current snapshot: 2026-10-17
 
+The .NET 10 source milestone targets all five projects and both GitHub workflows
+at .NET 10. Local verification uses Microsoft SDK 10.0.402 and runtime 10.0.13.
+The mDNS dependency graph promotes IPNetwork2 to compatible 2.6.618; xUnit remains
+on its v2 API at 2.9.3 with updated test SDK/runner tooling. Neither desktop nor
+backend tests now resolves the legacy NETStandard.Library chain. The current
+NuGet audit reports no vulnerable direct or transitive packages in any of the
+five projects. Directory.Build.props keeps full auditing enabled and makes
+NU1901 through NU1904 fail restore/build and CI.
+
+The .NET 10 rerun passes the 192 backend checks, all 92 browser checks in each
+engine and the native smoke harness. A separate genuine mDNS advertise/dispose
+probe also passes with the promoted IPNetwork2 binary. The local self-contained
+0.1.0-alpha.2.preview.1 verification ZIP bundles all three framework runtimes at
+10.0.13; its dependency manifest contains none of the legacy flagged packages,
+and all browser/license assets match source. Its SHA-256 checksum was verified.
+This preview package is local verification output, not a published release.
+
 The safe-retry source milestone adds durable, authenticated PC receipts for
 keyed Safari uploads and notes. Retrying checks the receipt before sending retained
 bytes again; matching replays return the original item, conflicting payloads are
@@ -36,11 +53,10 @@ with shared pairing invalidation clearing the old list, count, motion and blob
 URLs immediately. The replacement token is preserved. `npm test` now serializes
 browser fixtures, so CI uses the same command as local verification.
 
-A NuGet dependency audit flagged existing transitive System.Net.Http 4.3.0 and
-System.Text.RegularExpressions 4.3.0 packages in the desktop/test dependency
-graphs. No vulnerable package was reported for Beam.Server. Resolve the legacy
-packages alongside the planned .NET 10 migration before broader distribution;
-this source checkpoint does not change package references.
+Before this migration, the initial 2026-10-17 checkpoint reported transitive
+System.Net.Http 4.3.0 and System.Text.RegularExpressions 4.3.0 audit findings in
+the desktop/test graphs. The .NET 10 dependency updates above remove those
+legacy chains; the earlier source checkpoint did not change package references.
 
 The native desktop smoke harness passes with real app/tray/server lifecycle,
 queued-save shutdown, activity batching/deduplication, photo-thumbnail lifecycle,
