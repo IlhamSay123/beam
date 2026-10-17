@@ -645,6 +645,8 @@ internal static class Program
             try
             {
                 Directory.CreateDirectory(directory);
+                StartupChecks.Run(directory);
+                if (args.Contains("--startup-only")) { application.Shutdown(); return; }
                 await CheckPairingReset(directory, screenshotFolder);
                 await CheckConnectionSetup(directory, screenshotFolder);
                 if (connectionOnly) { application.Shutdown(); return; }
@@ -664,9 +666,21 @@ internal static class Program
                 typeof(App).GetProperty(nameof(App.Options))!.SetValue(null, options);
                 tray = new TrayIconService();
                 typeof(App).GetField("_trayIconService", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(application, tray);
-                tray.Initialize();
+                tray.Initialize(startInTray: true);
                 var window = (PillWindow)application.MainWindow;
                 testedWindow = window;
+                Require(!window.IsVisible && !window.IsLoaded, "Automatic startup flashed the workspace.");
+                Require(((DispatcherTimer)typeof(PillWindow).GetField("_pollTimer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!).IsEnabled,
+                    "Hidden startup did not start history polling.");
+                using (var backgroundClient = new HttpClient { BaseAddress = serverAddress })
+                {
+                    backgroundClient.DefaultRequestHeaders.Add("X-Beam-Token", options.ExpectedToken);
+                    using var backgroundResponse = await backgroundClient.GetAsync("/capabilities");
+                    Require(backgroundResponse.IsSuccessStatusCode, "Hidden startup did not keep the authenticated receiver available.");
+                }
+                window.OpenWorkspace();
+                Require(window.IsVisible, "Tray startup could not open the normal workspace.");
+                Console.WriteLine("PASS: automatic startup keeps the workspace unloaded while HTTP/polling run, then the tray opens Beam normally.");
                 var panel = window.Panel;
                 window.Width = 780;
                 window.Height = 600;

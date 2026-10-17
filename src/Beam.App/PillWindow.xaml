@@ -35,6 +35,7 @@
                     <MenuItem Header="Open Vault" Click="OpenVault_Click"/>
                     <MenuItem Header="Pair Phone" Click="Pair_Click"/>
                     <MenuItem Header="Hide to Tray" Click="HideTray_Click"/>
+                    <local:StartupMenuItem/>
                     <Separator/><MenuItem Header="Quit Beam" Click="Quit_Click"/>
                 </ContextMenu></Grid.ContextMenu>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="26"/></Grid.ColumnDefinitions>

@@ -11,14 +11,14 @@ public class TrayIconService : IDisposable
     private TaskbarIcon? _taskbarIcon;
     private PillWindow? _pillWindow;
     private Icon? _icon;
-    public void Initialize()
+    public void Initialize(bool startInTray = false)
     {
         _pillWindow = new PillWindow();
         Application.Current.MainWindow = _pillWindow;
         _icon = CreateIcon();
         _taskbarIcon = new TaskbarIcon { ToolTipText = "Beam - LAN transfer", Icon = _icon, ContextMenu = BuildContextMenu() };
         _taskbarIcon.TrayLeftMouseUp += (_, _) => _pillWindow.OpenWorkspace();
-        _pillWindow.OpenWorkspace();
+        if (!startInTray) _pillWindow.OpenWorkspace();
     }
     private ContextMenu BuildContextMenu()
     {
@@ -28,6 +28,9 @@ public class TrayIconService : IDisposable
         Add("Pill Mode", () => _pillWindow?.ShowPillMode());
         Add("Pair Phone", App.ShowPairing);
         Add("Hide to Tray", () => _pillWindow?.Hide());
+        var startup = new StartupMenuItem();
+        menu.Items.Add(startup);
+        menu.Opened += (_, _) => startup.RefreshState();
         menu.Items.Add(new Separator());
         Add("Quit Beam", () => _pillWindow?.Close());
         return menu;

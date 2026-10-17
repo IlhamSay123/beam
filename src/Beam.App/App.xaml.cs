@@ -14,21 +14,30 @@ public partial class App : Application
     public static MdnsAdvertiser Advertiser { get; } = new();
 
     private TrayIconService? _trayIconService;
+    private Mutex? _instanceGate;
     private static PairingWindow? _pairingWindow;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        var startInTray = e.Args.Contains("--startup", StringComparer.OrdinalIgnoreCase);
 
         var dataDirectory = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Beam");
         try
         {
+            _instanceGate = AppInstanceGate.TryAcquire();
+            if (_instanceGate is null)
+            {
+                if (!startInTray) MessageBox.Show("Beam is already running. Open it from the system tray.", "Beam");
+                Shutdown();
+                return;
+            }
             var token = PairingToken.LoadOrCreate(dataDirectory);
             Options = new BeamServerOptions(dataDirectory, token, Port: 8787);
             ServerApp = BeamServerHost.Build(Options);
             if (!await TryStartServerAsync(ServerApp, Options.Port,
-                message => MessageBox.Show(message, "Beam could not start", MessageBoxButton.OK, MessageBoxImage.Warning)))
+                message => { if (!startInTray) MessageBox.Show(message, "Beam could not start", MessageBoxButton.OK, MessageBoxImage.Warning); }))
             {
                 ServerApp = null!;
                 Shutdown(1);
@@ -36,13 +45,13 @@ public partial class App : Application
             }
             Advertiser.Start(Options.Port);
             _trayIconService = new TrayIconService();
-            _trayIconService.Initialize();
+            _trayIconService.Initialize(startInTray);
             var setupDirectory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Beam");
-            if (new SetupMarker(setupDirectory).TryClaimOffer()) ShowPairing();
+            if (!startInTray && new SetupMarker(setupDirectory).TryClaimOffer()) ShowPairing();
         }
         catch (Exception)
         {
-            MessageBox.Show("Beam could not start. Close any other Beam instance, check that your Documents folder is available, and try again.",
+            if (!startInTray) MessageBox.Show("Beam could not start. Close any other Beam instance, check that your Documents folder is available, and try again.",
                 "Beam could not start", MessageBoxButton.OK, MessageBoxImage.Warning);
             Shutdown(1);
         }
@@ -94,5 +103,6 @@ public partial class App : Application
             catch (Exception) { }
         }
         base.OnExit(e);
+        GC.KeepAlive(_instanceGate); // Windows releases the mutex after this process exits.
     }
 }
