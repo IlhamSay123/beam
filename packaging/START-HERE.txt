@@ -1,4 +1,4 @@
-BEAM - TRUSTED LAN ALPHA
+BEAM 0.1.0-alpha.2 - TRUSTED LAN ALPHA
 
 1. Extract the complete ZIP to a folder. Keep its files together.
 2. Open Beam.App.exe on your Windows PC. No .NET installation is required.
@@ -9,6 +9,12 @@ BEAM - TRUSTED LAN ALPHA
 6. Safari opens Beam. Use Send for photos, videos, files, notes and links.
    Use Receive for files and text queued from the PC.
    Vault keeps previous beams in both directions while the PC is available.
+
+UPGRADING FROM AN EARLIER ALPHA
+Quit the old Beam instance before opening this build. Extract the new ZIP into
+a fresh folder; keep its published files together. Leave Documents/Beam in place:
+the app reuses existing files, history and pairing. Updating does not rotate the
+token unless you choose Reset pairing. Refresh Safari to load the updated page.
 
 CONNECTION HELP
 Refresh the PC address list after changing networks. The QR follows the selected

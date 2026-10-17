@@ -19,13 +19,13 @@ Screenshots use generated demo files and notes, not personal transfers.
 Scan the PC's QR, then use **Send**, **Receive**, and **Vault** in Safari. No Shortcut is
 required for files, photos, videos, notes or links.
 
-[Download the Windows x64 alpha](https://github.com/IlhamSay123/beam/releases/tag/v0.1.0-alpha.1).
+[Download the Windows x64 alpha](https://github.com/IlhamSay123/beam/releases/tag/v0.1.0-alpha.2).
 Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
 .NET installation is required. This remains an unsigned trusted-LAN alpha.
 
-Current source targets .NET 10. The downloadable alpha.1 ZIP still bundles .NET 8.
-Phone Vault, file-type motion, connection/setup polish, safe Safari retries,
-pairing reset/token rotation and the runtime/dependency upgrades are newer source changes awaiting a new release.
+Alpha.2 bundles .NET 10 and includes phone Vault, file-type motion, connection/setup
+improvements, safe Safari retries and pairing reset/token rotation. Read the
+[alpha.2 release notes](docs/releases/v0.1.0-alpha.2.md) for upgrade steps and limits.
 
 <img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
 

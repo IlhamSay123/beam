@@ -12,6 +12,18 @@ when reopened. ASP.NET query-bearing request logs are suppressed; a captured-log
 regression covers both original and replacement QR tokens. This remains shared
 bearer authentication over trusted-LAN HTTP, without per-device identity/expiry.
 
+Physical-iPhone acceptance reported on 2026-10-17: reset/re-pair succeeded in
+0.1.0-alpha.2.preview.2. The user then reported the requested interruption/retry
+and Beam restart checks working: one saved copy after retry, retained pairing
+and Vault history, and rejection of the old QR. Old-Shortcut rejection and reset
+during an active transfer remain separate manual cases.
+
+Alpha.2 release preparation updates the default packaging version, setup text,
+download link and release notes. The application code is unchanged from the
+reviewed pairing-security milestone at 449cfba. The final Windows ZIP is rebuilt
+from the release commit, with the bundled runtime, browser/setup assets, archive
+checksum and absence of personal data checked before publication.
+
 The .NET 10 source milestone targets all five projects and both GitHub workflows
 at .NET 10. Local verification uses Microsoft SDK 10.0.402 and runtime 10.0.13.
 The mDNS dependency graph promotes IPNetwork2 to compatible 2.6.618; xUnit remains
@@ -90,8 +102,9 @@ a duplicate. The occupied-port case intentionally logs a failed bind; the smoke
 harness's zero exit code and PASS result determine success for that case.
 
 The user smoke-tested the phone Vault/motion interface and reported it working,
-including opening a photo and saving it into Photos. The new connection/setup,
-safe-retry and pairing-reset flows still need physical-iPhone acceptance testing. WebKit automation is engine
+including opening a photo and saving it into Photos. Reset/re-pair and the
+follow-up interruption/retry and Beam restart checks also passed as reported
+above. Remaining manual scenarios are listed below. WebKit automation is engine
 coverage, not proof of every iOS picker, memory limit or save-sheet behavior.
 Use [Safari setup](safari-setup.md) next.
 
