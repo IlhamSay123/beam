@@ -16,6 +16,8 @@ $beamRunKey = $beamRunRoot + '\Run'
 $beamUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\Beam.InstallerTest.' + $beamId + '_is1'
 $beamCommand = '"' + (Join-Path $beamInstall 'Beam.App.exe') + '" --startup'
 if (-not $LogDirectory) { $LogDirectory = Join-Path $beamRepo ('artifacts/installer-test-logs/' + $beamId) }
+# The uninstaller relaunches from a temporary folder; /LOG must stay absolute.
+$LogDirectory = [IO.Path]::GetFullPath($LogDirectory)
 New-Item -ItemType Directory -Path $beamRoot,$LogDirectory -Force | Out-Null
 
 function Require-BeamTest([bool]$condition, [string]$message) {
