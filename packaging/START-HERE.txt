@@ -1,7 +1,9 @@
-BEAM 0.1.0-alpha.2 - TRUSTED LAN ALPHA
+BEAM - TRUSTED LAN ALPHA PREVIEW
 
-1. Extract the complete ZIP to a folder. Keep its files together.
-2. Open Beam.App.exe on your Windows PC. No .NET installation is required.
+1. Run the Setup EXE for a per-user install, or extract the complete portable
+   ZIP to a folder and keep its files together. Setup adds a Start menu shortcut;
+   a desktop shortcut and Windows startup are optional and off by default.
+2. Open Beam on your Windows PC. No .NET installation is required.
 3. Allow Beam on your trusted private network if Windows prompts.
 4. Put the iPhone and PC on a reachable local network.
 5. Pairing opens the first time. Later, click Pair phone. Select the address
@@ -11,8 +13,10 @@ BEAM 0.1.0-alpha.2 - TRUSTED LAN ALPHA
    Vault keeps previous beams in both directions while the PC is available.
 
 UPGRADING FROM AN EARLIER ALPHA
-Quit the old Beam instance before opening this build. Extract the new ZIP into
-a fresh folder; keep its published files together. Leave Documents/Beam in place:
+Quit the old Beam instance before running Setup or opening this build.
+For an installed copy, run the new Setup in the same installation folder.
+For a portable copy, extract the new ZIP into a fresh folder.
+Leave Documents/Beam in place:
 the app reuses existing files, history and pairing. Updating does not rotate the
 token unless you choose Reset pairing. Refresh Safari to load the updated page.
 
@@ -50,6 +54,16 @@ Pill mode keeps a small widget on-screen. Minimize uses the taskbar.
 Hide to tray keeps Beam receiving. Close / Quit stops Beam completely after
 active desktop queue work finishes.
 
+WINDOWS STARTUP AND UNINSTALL
+Choose Start Beam with Windows in Setup or in the tray/pill menu. Sign-in launches
+stay in the tray with receiving active. Use Open Beam from the tray to show the
+workspace. Windows Settings > Apps > Startup can override or delay this option.
+If a portable folder moves, turn startup off before moving it, then enable it
+from the new copy. Only one Beam instance can run in a Windows session.
+Quit Beam before upgrading or uninstalling. Uninstall from Windows Installed Apps.
+Uninstall keeps Documents/Beam, including files, history and pairing. A portable
+ZIP has no uninstaller; disable its startup option before removing its folder.
+
 DATA AND SECURITY
 Files and notes are stored under Documents/Beam on the Windows account.
 This alpha uses unencrypted local HTTP and a shared pairing token. Use only
@@ -58,5 +72,5 @@ Do not share your pairing QR, token, private files, or history.json.
 
 This development build is unsigned. Windows may show a security warning.
 Only run a download whose source and checksum you trust; do not disable Windows
-security globally. An installer and production security hardening are not yet
-included. The Windows executable is x64.
+security globally. The app and installer are unsigned previews; production
+security hardening is not included. The Windows executable is x64.

@@ -27,6 +27,10 @@ Alpha.2 bundles .NET 10 and includes phone Vault, file-type motion, connection/s
 improvements, safe Safari retries and pairing reset/token rotation. Read the
 [alpha.2 release notes](docs/releases/v0.1.0-alpha.2.md) for upgrade steps and limits.
 
+Current source adds a per-user Setup installer and optional **Start Beam with
+Windows**. These are being tested in 0.1.0-alpha.3.preview.1; the published
+alpha.2 download above is unchanged. See [Windows installation and startup](docs/setup/desktop.md#installation-and-windows-startup).
+
 <img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
 
 ## What Works
@@ -42,6 +46,7 @@ improvements, safe Safari retries and pairing reset/token rotation. Read the
 | Vault | Both directions on phone and desktop. Safari supports search, direction/type filters, image/note previews and repeat copy/download; desktop adds sorting, open, reveal, and resend. |
 | Pairing | First-run setup, refreshable adapter/address selection, QR browser pairing, copyable token/link, confirmed reset/token rotation, local checks and redacted diagnostics. |
 | Connection status | Recent authenticated remote-browser activity and last-seen on Windows; visible retry and foreground reconnection in Safari. |
+| Windows installation/startup | Current source: per-user installer, optional shortcuts and opt-in sign-in launch into the tray. Portable ZIP remains supported. |
 | Persistence | Inbox, outbox, notes, and acknowledgement state survive app restarts. Records no longer expire automatically. |
 | Error handling | Missing files, invalid tokens, network failures, empty uploads, and failed acknowledgements are surfaced. |
 
@@ -98,7 +103,17 @@ dotnet publish src/Beam.App/Beam.App.csproj `
 ```
 
 Keep the complete publish folder together; it includes the browser assets and
-dependencies. An installer, code signing and auto-updating are not provided yet.
+dependencies. To package the portable ZIP and per-user installer:
+
+```powershell
+./scripts/Publish-Beam.ps1 -Version 0.1.0-alpha.3.preview.1
+./scripts/Publish-BeamInstaller.ps1 -Version 0.1.0-alpha.3.preview.1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3.preview.1-win-x64
+```
+
+The installer builder acquires a checksum- and publisher-verified Inno Setup
+6.7.3 compiler when needed; `-IsccPath` can select an existing compiler.
+Outputs are an unsigned Setup EXE, portable ZIP, and SHA-256 sidecars.
+Code signing and auto-updating are not provided yet.
 
 ## Connect an iPhone
 
@@ -154,7 +169,7 @@ working and displays an error. Reset cannot recall data already copied or saved.
 
 This produces a versioned, self-contained win-x64 ZIP and SHA-256 checksum under
 artifacts/release, including START-HERE.txt. The Package Windows Alpha workflow
-can build the same downloadable artifact in GitHub Actions. It is unsigned and
+also builds a Setup EXE and its checksum as downloadable GitHub Actions artifacts. It is unsigned and
 remains a trusted-LAN alpha, not a signed installer or hardened public service.
 
 ### Shortcut Request Summary
@@ -319,8 +334,9 @@ download timeouts, polling races, browser uploads, original names/bytes, progres
 states, cancellation and retry. WebKit is Safari-family engine coverage, not
 automation of a physical iPhone.
 
-GitHub Actions builds the Windows solution and runs backend/browser checks.
-Native tray/desktop smoke tests remain a local Windows check. Read the
+GitHub Actions builds the Windows solution, runs backend/browser checks, and
+verifies startup registration and isolated installer upgrades/uninstalls.
+The full native tray/desktop smoke suite remains a local Windows check. Read the
 [verification guide](docs/setup/verification.md) before treating a build as a release.
 
 ## Security and Limits
@@ -352,7 +368,7 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 - Favorites/pinning and optional storage cleanup controls.
 - Better network diagnostics and device connection visibility.
 - Encrypted transport, expiring credentials and device-specific authorization.
-- Signed installer, Windows startup integration, and release packaging.
+- Code signing and automatic update delivery.
 
 ## Project Status and License
 

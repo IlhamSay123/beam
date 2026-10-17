@@ -47,3 +47,38 @@ jobs:
         env:
           BEAM_BROWSER: chromium
           BEAM_ENGINE: ${{ matrix.engine }}
+
+  installer:
+    name: Windows Startup and Installer
+    runs-on: windows-latest
+    env:
+      BEAM_PACKAGE_VERSION: 0.1.0-ci.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build self-contained installer payload
+        shell: pwsh
+        run: |
+          dotnet publish src/Beam.App/Beam.App.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/installer-payload "-p:Version=$env:BEAM_PACKAGE_VERSION"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -LiteralPath packaging/START-HERE.txt -Destination artifacts/installer-payload
+      - name: Verify optional startup behavior
+        run: dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj --configuration Release -- --startup-only
+      - name: Acquire verified installer compiler
+        shell: pwsh
+        run: |
+          $beamCompiler = & ./scripts/Get-InnoSetup.ps1 -Destination (Join-Path $env:RUNNER_TEMP 'beam-inno-6.7.3')
+          "BEAM_ISCC=$beamCompiler" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Verify isolated install upgrade and uninstall
+        shell: pwsh
+        run: ./tests/Beam.Installer.Tests/Invoke-InstallerTests.ps1 -PublishDirectory artifacts/installer-payload -IsccPath $env:BEAM_ISCC -LogDirectory artifacts/installer-test-logs
+      - name: Compile production installer defaults
+        shell: pwsh
+        run: ./scripts/Publish-BeamInstaller.ps1 -PublishDirectory artifacts/installer-payload -Version $env:BEAM_PACKAGE_VERSION -IsccPath $env:BEAM_ISCC -OutputDirectory artifacts/installer-ci
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: Beam-installer-test-logs
+          path: artifacts/installer-test-logs/

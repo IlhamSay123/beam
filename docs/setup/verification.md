@@ -1,6 +1,40 @@
 # Beam verification
 
-## Current snapshot: 2026-10-17
+## Windows installer/startup preview: 2026-10-18
+
+Current source adds per-user opt-in sign-in startup into the tray, a process
+lifetime gate, and an Inno Setup installer. Native checks use a unique HKCU test
+subtree and verify command quoting/validation, menu error rollback/recovery,
+ownership-aware removal, and duplicate/released mutex handles. Full native smoke
+also verifies that hidden startup leaves the workspace unloaded while HTTP and
+polling remain active, then opens the workspace normally.
+
+The installer suite uses a unique test AppId, mutex, non-startup registry subtree,
+shortcuts and temporary installation folder. It installs, upgrades and uninstalls
+the complete payload without touching real startup or personal data. Checks cover
+default/explicit choices, app-side opt-out/opt-in retention, paths with spaces,
+running-app refusal, registered metadata/shortcuts, foreign-command preservation,
+unowned files and synthetic user-data hashes. Packaging refuses personal data,
+version mismatches and output nested inside its input payload.
+
+```powershell
+# Isolated startup/menu/instance checks, suitable for Windows CI
+dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj --configuration Release -- --startup-only
+
+# Build a preview, then exercise an isolated installer identity
+./scripts/Publish-Beam.ps1 -Version 0.1.0-alpha.3.preview.1
+$beamCompiler = & ./scripts/Get-InnoSetup.ps1
+./tests/Beam.Installer.Tests/Invoke-InstallerTests.ps1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3.preview.1-win-x64 -IsccPath $beamCompiler
+./scripts/Publish-BeamInstaller.ps1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3.preview.1-win-x64 -Version 0.1.0-alpha.3.preview.1 -IsccPath $beamCompiler
+```
+
+Before releasing this preview, manually install it, opt in, sign out/in and
+confirm Beam starts only in the tray and the iPhone can connect. Disable startup,
+sign out/in again and confirm Beam stays closed. Check Windows' independent
+Startup setting if it does not launch. These physical sign-in checks are not
+claimed by the automated suite. The published alpha.2 assets remain unchanged.
+
+## Previous snapshot: 2026-10-17
 
 The pairing-security milestone adds a confirmed PC-only reset. A new random key
 is persisted atomically before activation; old authenticated requests are
@@ -184,7 +218,7 @@ Beam.App.exe. Open Pair phone or the tray menu's Pair Phone and follow
 - [ ] Hide/lock Safari for at least 20 seconds: Windows becomes inactive with last-seen; returning rechecks activity.
 - [ ] Disconnect Wi-Fi and return: the global retry action works from Send, Receive and Vault without replaying uploads.
 - [ ] A changed PC IP requires an updated address/QR; no automatic rediscovery is claimed.
-- [ ] A second Beam instance explains the occupied port and does not leave a second tray/server process.
+- [ ] A second manual Beam launch directs you to the existing tray; automatic duplicates stay quiet. No second tray/server process remains.
 - [ ] Single photo arrives in Inbox, history, glow and Windows toast.
 - [ ] Multiple selected photos arrive directly from Safari; check batch count and notification behavior.
 - [ ] Refresh Safari after updating the PC. A PC without safeRetryVersion 1 blocks new sending instead of silently using unprotected retries.
@@ -208,6 +242,10 @@ Beam.App.exe. Open Pair phone or the tray menu's Pair Phone and follow
 - [ ] Restart Beam after reset: the new key still works and the old key is rejected.
 - [ ] PC restart retains received history and queued/acknowledged items.
 - [ ] Private-network firewall permission permits phone access.
+- [ ] Setup defaults Windows startup off; the tray/pill checkbox can enable and disable it.
+- [ ] Sign out/in with startup enabled: Beam stays in the tray, can be opened, and receives from the iPhone.
+- [ ] Sign out/in after disabling startup: Beam stays closed.
+- [ ] Upgrade keeps the current startup choice; uninstall keeps Documents/Beam.
 
 Physical iPhone checks and Windows visual/notification checks remain
 release-specific checks even where earlier development tests passed. A browser download being

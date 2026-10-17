@@ -6,6 +6,44 @@ and switches between newest/oldest first. Selecting an item shows its
 preview and open/copy, reveal-in-Explorer and resend actions. Missing
 files are labelled and their actions disabled.
 
+## Installation and Windows startup
+
+The current source can produce a per-user Setup EXE and a portable ZIP.
+Setup installs to `%LOCALAPPDATA%\Programs\Beam` by default, adds a Start menu
+shortcut, and registers Beam in Windows Installed Apps. It does not require
+administrator access. Keep a portable ZIP's extracted files together.
+
+**Start Beam with Windows** and the desktop shortcut are optional/off on a new
+installation. You can change startup later in the tray icon's menu or by
+right-clicking the compact pill. Automatic sign-in launches stay in the tray;
+receiving stays active. Choose **Open Beam** from the tray to open the workspace.
+The first pairing offer waits for a normal manual launch.
+
+The menu reflects this copy's startup registration. Windows Settings > Apps >
+Startup can separately disable or delay sign-in launching. Beam does not change
+Windows' independent approval settings. A portable copy needs a stable folder:
+turn startup off before moving it, then enable it from its new location.
+Enabling it from a different Beam copy replaces the previous startup command.
+
+Quit Beam before running a newer Setup or uninstalling through Installed Apps.
+Setup refuses to change a running app. Upgrades in the same folder retain the
+current startup choice, including changes made in Beam after installation.
+Uninstall removes installed app files and its own startup command, while keeping
+Documents/Beam (Vault, history, receipts and token) and the pairing-offer marker.
+It also keeps any startup command now belonging to another copy.
+For a portable ZIP, disable startup before deleting its extracted folder.
+
+Only one Beam receiver can run in a Windows session. Opening another copy
+manually directs you to the existing tray icon; a duplicate automatic launch
+exits quietly.
+
+The 0.1.0-alpha.3.preview.1 installer is an unsigned test build. Alpha.2's
+published ZIP remains unchanged. Sign-out/sign-in acceptance is still a manual
+Windows check; automated hidden-startup tests cannot prove Windows will allow
+an entry that the user or a policy disabled.
+
+## Window controls
+
 Window controls have separate meanings:
 
 - Pill mode: a draggable 164 x 48 on-screen widget. Click its body to

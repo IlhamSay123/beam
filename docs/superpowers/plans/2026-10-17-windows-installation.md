@@ -44,18 +44,18 @@
 
 **Interfaces:** `Publish-BeamInstaller.ps1 -PublishDirectory -OutputDirectory -Version -IsccPath` produces `Beam-<version>-win-x64-Setup.exe` and `.sha256`; compiler helper returns `ISCC.exe`; test-only template parameters isolate identity, Run subtree and shortcut roots.
 
-- [ ] Write lifecycle assertions and run against missing installer build/template to capture RED.
-- [ ] Implement pinned compiler acquisition, per-user template, preference preservation, safe uninstall and mutex checks. Validate version/payload paths and refuse personal-data payloads.
-- [ ] Build and silently install/upgrade/uninstall test identity; verify default/explicit startup choices, app-side opt-out retention, command quoting, foreign-command preservation, app/data cleanup boundaries and blocked running-app mutation.
+- [x] Write lifecycle assertions and run against missing installer build/template to capture RED.
+- [x] Implement pinned compiler acquisition, per-user template, preference preservation, safe uninstall and mutex checks. Validate version/payload paths and refuse personal-data payloads.
+- [x] Build and silently install/upgrade/uninstall test identity; verify default/explicit startup choices, app-side opt-out retention, command quoting, foreign-command preservation, app/data cleanup boundaries and blocked running-app mutation.
 - [ ] Build actual preview setup and portable ZIP; inspect versions, payload assets and SHA-256.
-- [ ] Extend CI/package workflow to compile/test and upload ZIP/setup/checksums.
+- [x] Extend CI/package workflow to compile/test and upload ZIP/setup/checksums.
 
 ## Task 3: Verification, review and delivery
 
 **Files:** current README, setup/verification guide, START-HERE and security notes as needed.
 
-- [ ] Document startup opt-in/tray behavior, uninstall data retention, Windows overrides, installer/portable upgrade and unsigned preview status.
-- [ ] Run Release builds, backend and both browser engines, native startup/lifecycle and installer lifecycle checks.
+- [x] Document startup opt-in/tray behavior, uninstall data retention, Windows overrides, installer/portable upgrade and unsigned preview status.
+- [x] Run Release builds, backend and both browser engines, native startup/lifecycle and installer lifecycle checks.
 - [ ] Resolve independent review findings with regressions; verify actual preview package contents/checksum.
 - [ ] Commit/push source and verify GitHub CI. Leave the published alpha.2 release unchanged; provide the new local installer for user testing.
 
@@ -65,3 +65,7 @@
 - User selected automatic startup in the tray. Agent chose per-user Inno Setup and opt-in defaults.
 
 - Task 1: RED missing WindowsStartupRegistration; GREEN isolated registry/gate checks and full native tray/server suite. Additional RED tooltip recovery test fixed by restoring the normal hint. Native hidden startup keeps the workspace unloaded while authenticated HTTP and polling are active.
+
+- Task 2: isolated full-payload install/upgrade/uninstall passed. Nested-output regression failed before the input guard and passed afterward. Independent review found unrelated /MERGETASKS could discard enabled startup; a new lifecycle case reproduced it, then task parsing was corrected and explicit merged on/off cases added.
+- Task 3: Release build clean; full native suite, 199 backend checks and 93 checks in each browser engine passed. Final source delivery, preview-package inspection and CI results are recorded in the ignored artifacts/windows-installation-work/progress.md ledger.
+- Review fix verified: full isolated installer suite passed with unrelated merged shortcut changes while enabled/disabled, explicit merged startup on/off, owned/foreign uninstall and all input guards. Independent follow-up review reports no remaining findings.

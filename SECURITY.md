@@ -43,6 +43,15 @@ browser storage, clipboard copies and the PC token file retain the existing
 trusted-LAN security boundaries. There is no individual-device revocation,
 automatic token expiry, or encrypted transport.
 
+## Windows installation and startup
+
+Startup is an explicit current-user opt-in. It stores the quoted executable
+path plus `--startup` in HKCU's Run key; no token or pairing URL is included.
+The installer runs per-user, does not add firewall rules, and does not force-close
+the app. Uninstall keeps Documents/Beam and deletes a startup value only when it
+still matches this installed copy. Startup does not change the trusted-LAN HTTP
+or storage boundaries above. The app and preview installer are unsigned.
+
 ## Reporting
 
 Report vulnerabilities privately to the repository owner rather than publishing
