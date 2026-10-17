@@ -1,5 +1,5 @@
 #ifndef BeamVersion
-  #define BeamVersion "0.1.0-alpha.3.preview.1"
+  #define BeamVersion "0.1.0-alpha.3"
 #endif
 #ifndef PublishDirectory
   #error PublishDirectory must be provided by Publish-BeamInstaller.ps1

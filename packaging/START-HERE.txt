@@ -1,4 +1,4 @@
-BEAM - TRUSTED LAN ALPHA PREVIEW
+BEAM 0.1.0-alpha.3 - TRUSTED LAN ALPHA
 
 1. Run the Setup EXE for a per-user install, or extract the complete portable
    ZIP to a folder and keep its files together. Setup adds a Start menu shortcut;
@@ -72,5 +72,5 @@ Do not share your pairing QR, token, private files, or history.json.
 
 This development build is unsigned. Windows may show a security warning.
 Only run a download whose source and checksum you trust; do not disable Windows
-security globally. The app and installer are unsigned previews; production
+security globally. The app and installer are unsigned alphas; production
 security hardening is not included. The Windows executable is x64.

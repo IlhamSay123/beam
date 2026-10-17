@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory)][string]$PublishDirectory,
     [string]$OutputDirectory = '',
-    [string]$Version = '0.1.0-alpha.3.preview.1',
+    [string]$Version = '0.1.0-alpha.3',
     [string]$IsccPath = '',
     [string]$TestIdentity = '',
     [string]$TestRoot = ''

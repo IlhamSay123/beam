@@ -50,7 +50,7 @@ path plus `--startup` in HKCU's Run key; no token or pairing URL is included.
 The installer runs per-user, does not add firewall rules, and does not force-close
 the app. Uninstall keeps Documents/Beam and deletes a startup value only when it
 still matches this installed copy. Startup does not change the trusted-LAN HTTP
-or storage boundaries above. The app and preview installer are unsigned.
+or storage boundaries above. The app and installer are unsigned.
 
 ## Reporting
 

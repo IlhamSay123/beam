@@ -1,8 +1,8 @@
 # Beam verification
 
-## Windows installer/startup preview: 2026-10-18
+## Alpha.3 installer/startup: 2026-10-18
 
-Current source adds per-user opt-in sign-in startup into the tray, a process
+Alpha.3 adds per-user opt-in sign-in startup into the tray, a process
 lifetime gate, and an Inno Setup installer. Native checks use a unique HKCU test
 subtree and verify command quoting/validation, menu error rollback/recovery,
 ownership-aware removal, and duplicate/released mutex handles. Full native smoke
@@ -21,18 +21,26 @@ version mismatches and output nested inside its input payload.
 # Isolated startup/menu/instance checks, suitable for Windows CI
 dotnet run --project tests/Beam.App.Smoke/Beam.App.Smoke.csproj --configuration Release -- --startup-only
 
-# Build a preview, then exercise an isolated installer identity
-./scripts/Publish-Beam.ps1 -Version 0.1.0-alpha.3.preview.1
+# Build a package, then exercise an isolated installer identity
+./scripts/Publish-Beam.ps1 -Version 0.1.0-alpha.3
 $beamCompiler = & ./scripts/Get-InnoSetup.ps1
-./tests/Beam.Installer.Tests/Invoke-InstallerTests.ps1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3.preview.1-win-x64 -IsccPath $beamCompiler
-./scripts/Publish-BeamInstaller.ps1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3.preview.1-win-x64 -Version 0.1.0-alpha.3.preview.1 -IsccPath $beamCompiler
+./tests/Beam.Installer.Tests/Invoke-InstallerTests.ps1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3-win-x64 -IsccPath $beamCompiler
+./scripts/Publish-BeamInstaller.ps1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3-win-x64 -Version 0.1.0-alpha.3 -IsccPath $beamCompiler
 ```
 
-Before releasing this preview, manually install it, opt in, sign out/in and
-confirm Beam starts only in the tray and the iPhone can connect. Disable startup,
-sign out/in again and confirm Beam stays closed. Check Windows' independent
-Startup setting if it does not launch. These physical sign-in checks are not
-claimed by the automated suite. The published alpha.2 assets remain unchanged.
+Physical Windows acceptance reported on 2026-10-18: startup worked after sign-in
+and Beam stayed in the tray using 0.1.0-alpha.3.preview.1. This does not claim an
+additional phone transfer or disabled-startup sign-in check. Check Windows'
+independent Startup setting if an enabled entry does not launch.
+
+The implementation checkpoint d2a5171 passed all four jobs in
+[GitHub CI](https://github.com/IlhamSay123/beam/actions/runs/39078961707), including
+startup registration and full-payload install/upgrade/uninstall. Local native
+smoke, 199 backend checks and 93 checks in each browser engine also passed.
+Independent review is clear. Release preparation changes version/setup text and
+documentation; application and installer behavior are unchanged from that tested
+checkpoint. The final release packages are rebuilt from the release commit,
+with versions, runtime, payload assets, privacy and checksums verified.
 
 ## Previous snapshot: 2026-10-17
 

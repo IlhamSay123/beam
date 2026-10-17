@@ -19,17 +19,16 @@ Screenshots use generated demo files and notes, not personal transfers.
 Scan the PC's QR, then use **Send**, **Receive**, and **Vault** in Safari. No Shortcut is
 required for files, photos, videos, notes or links.
 
-[Download the Windows x64 alpha](https://github.com/IlhamSay123/beam/releases/tag/v0.1.0-alpha.2).
-Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
-.NET installation is required. This remains an unsigned trusted-LAN alpha.
+[Download Beam alpha.3 for Windows x64](https://github.com/IlhamSay123/beam/releases/tag/v0.1.0-alpha.3).
+Run the per-user Setup EXE, or extract the complete portable ZIP and open
+Beam.App.exe. Follow START-HERE.txt. No SDK or .NET installation is required.
 
-Alpha.2 bundles .NET 10 and includes phone Vault, file-type motion, connection/setup
-improvements, safe Safari retries and pairing reset/token rotation. Read the
-[alpha.2 release notes](docs/releases/v0.1.0-alpha.2.md) for upgrade steps and limits.
-
-Current source adds a per-user Setup installer and optional **Start Beam with
-Windows**. These are being tested in 0.1.0-alpha.3.preview.1; the published
-alpha.2 download above is unchanged. See [Windows installation and startup](docs/setup/desktop.md#installation-and-windows-startup).
+Alpha.3 adds an installer and optional **Start Beam with Windows**, which stays
+in the tray after sign-in. It includes alpha.2's phone Vault, safe Safari retries,
+pairing reset/token rotation and bundled .NET 10 runtime. Read the
+[alpha.3 release notes](docs/releases/v0.1.0-alpha.3.md) for upgrade steps and limits,
+or the [Windows installation and startup guide](docs/setup/desktop.md#installation-and-windows-startup).
+This remains an unsigned trusted-LAN alpha.
 
 <img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
 
@@ -46,7 +45,7 @@ alpha.2 download above is unchanged. See [Windows installation and startup](docs
 | Vault | Both directions on phone and desktop. Safari supports search, direction/type filters, image/note previews and repeat copy/download; desktop adds sorting, open, reveal, and resend. |
 | Pairing | First-run setup, refreshable adapter/address selection, QR browser pairing, copyable token/link, confirmed reset/token rotation, local checks and redacted diagnostics. |
 | Connection status | Recent authenticated remote-browser activity and last-seen on Windows; visible retry and foreground reconnection in Safari. |
-| Windows installation/startup | Current source: per-user installer, optional shortcuts and opt-in sign-in launch into the tray. Portable ZIP remains supported. |
+| Windows installation/startup | per-user installer, optional shortcuts and opt-in sign-in launch into the tray. Portable ZIP remains supported. |
 | Persistence | Inbox, outbox, notes, and acknowledgement state survive app restarts. Records no longer expire automatically. |
 | Error handling | Missing files, invalid tokens, network failures, empty uploads, and failed acknowledgements are surfaced. |
 
@@ -106,8 +105,8 @@ Keep the complete publish folder together; it includes the browser assets and
 dependencies. To package the portable ZIP and per-user installer:
 
 ```powershell
-./scripts/Publish-Beam.ps1 -Version 0.1.0-alpha.3.preview.1
-./scripts/Publish-BeamInstaller.ps1 -Version 0.1.0-alpha.3.preview.1 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3.preview.1-win-x64
+./scripts/Publish-Beam.ps1 -Version 0.1.0-alpha.3
+./scripts/Publish-BeamInstaller.ps1 -Version 0.1.0-alpha.3 -PublishDirectory artifacts/release/Beam-0.1.0-alpha.3-win-x64
 ```
 
 The installer builder acquires a checksum- and publisher-verified Inno Setup

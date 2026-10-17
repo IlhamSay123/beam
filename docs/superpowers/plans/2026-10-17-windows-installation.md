@@ -47,7 +47,7 @@
 - [x] Write lifecycle assertions and run against missing installer build/template to capture RED.
 - [x] Implement pinned compiler acquisition, per-user template, preference preservation, safe uninstall and mutex checks. Validate version/payload paths and refuse personal-data payloads.
 - [x] Build and silently install/upgrade/uninstall test identity; verify default/explicit startup choices, app-side opt-out retention, command quoting, foreign-command preservation, app/data cleanup boundaries and blocked running-app mutation.
-- [ ] Build actual preview setup and portable ZIP; inspect versions, payload assets and SHA-256.
+- [x] Build actual preview setup and portable ZIP; inspect versions, payload assets and SHA-256.
 - [x] Extend CI/package workflow to compile/test and upload ZIP/setup/checksums.
 
 ## Task 3: Verification, review and delivery
@@ -56,8 +56,8 @@
 
 - [x] Document startup opt-in/tray behavior, uninstall data retention, Windows overrides, installer/portable upgrade and unsigned preview status.
 - [x] Run Release builds, backend and both browser engines, native startup/lifecycle and installer lifecycle checks.
-- [ ] Resolve independent review findings with regressions; verify actual preview package contents/checksum.
-- [ ] Commit/push source and verify GitHub CI. Leave the published alpha.2 release unchanged; provide the new local installer for user testing.
+- [x] Resolve independent review findings with regressions; verify actual preview package contents/checksum.
+- [x] Commit/push source and verify GitHub CI. Leave the published alpha.2 release unchanged; provide the new local installer for user testing.
 
 ## Execution record
 
@@ -69,3 +69,5 @@
 - Task 2: isolated full-payload install/upgrade/uninstall passed. Nested-output regression failed before the input guard and passed afterward. Independent review found unrelated /MERGETASKS could discard enabled startup; a new lifecycle case reproduced it, then task parsing was corrected and explicit merged on/off cases added.
 - Task 3: Release build clean; full native suite, 199 backend checks and 93 checks in each browser engine passed. Final source delivery, preview-package inspection and CI results are recorded in the ignored artifacts/windows-installation-work/progress.md ledger.
 - Review fix verified: full isolated installer suite passed with unrelated merged shortcut changes while enabled/disabled, explicit merged startup on/off, owned/foreign uninstall and all input guards. Independent follow-up review reports no remaining findings.
+
+- Completed preview delivery at d2a5171: CI 39078961707 passed all four jobs, actual ZIP/Setup and checksums were inspected, and independent review is clear. On 2026-10-18 the user confirmed Windows startup worked and Beam stayed in the tray, then authorized publishing alpha.3.

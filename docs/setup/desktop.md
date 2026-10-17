@@ -8,7 +8,7 @@ files are labelled and their actions disabled.
 
 ## Installation and Windows startup
 
-The current source can produce a per-user Setup EXE and a portable ZIP.
+Alpha.3 provides a per-user Setup EXE and a portable ZIP.
 Setup installs to `%LOCALAPPDATA%\Programs\Beam` by default, adds a Start menu
 shortcut, and registers Beam in Windows Installed Apps. It does not require
 administrator access. Keep a portable ZIP's extracted files together.
@@ -37,10 +37,10 @@ Only one Beam receiver can run in a Windows session. Opening another copy
 manually directs you to the existing tray icon; a duplicate automatic launch
 exits quietly.
 
-The 0.1.0-alpha.3.preview.1 installer is an unsigned test build. Alpha.2's
-published ZIP remains unchanged. Sign-out/sign-in acceptance is still a manual
-Windows check; automated hidden-startup tests cannot prove Windows will allow
-an entry that the user or a policy disabled.
+The alpha.3 app and installer are unsigned. On 2026-10-18 the user confirmed that
+Windows sign-in startup worked with the installed preview and Beam stayed in the
+tray. Windows or account policies can still override startup. Automated tests
+cannot prove Windows will allow an entry that the user or a policy disabled.
 
 ## Window controls
 
