@@ -13,7 +13,7 @@ $PublishDirectory = (Resolve-Path -LiteralPath $PublishDirectory).Path
 foreach ($beamRequired in @('Beam.App.exe','Beam.App.dll','coreclr.dll','hostfxr.dll','wwwroot/index.html','wwwroot/app.js','wwwroot/vault.js','wwwroot/motion.js','wwwroot/styles.css','wwwroot/lucide.min.js','wwwroot/lucide.LICENSE','START-HERE.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $PublishDirectory $beamRequired) -PathType Leaf)) { throw "Publish a complete self-contained Beam folder first. Missing: $beamRequired" }
 }
-if (Get-ChildItem -LiteralPath $PublishDirectory -Recurse | Where-Object Name -In @('token.txt','history.json','Inbox','Outbox')) { throw 'Refusing an installer payload containing personal data.' }
+if (Get-ChildItem -LiteralPath $PublishDirectory -Recurse -Force | Where-Object Name -In @('token.txt','history.json','Inbox','Outbox')) { throw 'Refusing an installer payload containing personal data.' }
 $beamTestBuild = -not [string]::IsNullOrEmpty($TestIdentity)
 if ($beamTestBuild) {
     $beamGuid = [Guid]::Empty

@@ -95,6 +95,7 @@ try {
     Require-BeamTest (-not (Test-Path -LiteralPath $beamNestedOutput)) 'Rejected nested output created files in the payload.'
 
     [IO.File]::WriteAllText((Join-Path $beamInvalidPayload 'history.json'), 'synthetic-private-data')
+    [IO.File]::SetAttributes((Join-Path $beamInvalidPayload 'history.json'), [IO.FileAttributes]::Hidden)
     $beamRejected = $false
     try {
         $null = & $beamBuilder -PublishDirectory $beamInvalidPayload -OutputDirectory (Join-Path $beamRoot 'Rejected private output') -Version '0.1.0-installertest.1' -IsccPath $IsccPath
