@@ -44,7 +44,7 @@ protection. It preserves the previous Vault/motion milestone.
 
 The Release solution builds without warnings or errors. The backend suite has
 199 passing checks. All 93 browser checks pass in Chromium and all 93 in WebKit
-with serialized browser fixtures, including nine real-server integration checks.
+with serialized browser fixtures, including eleven real-server integration checks.
 Pairing regressions cover repeated raw token headers, old/new authorization,
 clean-restart persistence, failed writes/recovery, concurrent rotation, handler
 revocation/drain and QR-secret logging. The native harness verifies responsive
@@ -109,6 +109,14 @@ a clean dependency manifest and a verified SHA-256 checksum. It is not a publish
 release. Independent security review found a QR query logging gap; a regression
 reproduced it before the category-filter fix and passes afterward. Follow-up
 review found no further issues.
+
+The first pairing-reset CI run passed Windows/backend and Chromium, but WebKit
+missed the download button click on a low Vault row before reset. Local event
+and request diagnostics reproduced the missing click. The reset regression now
+searches for its fixture file and waits for one rendered result before clicking,
+and restores the original page to the foreground after checking an old QR.
+Every security assertion remains enabled. The complete 11-case real-server
+sequence passes twice in WebKit with this adjustment.
 
 ## Automated checks
 

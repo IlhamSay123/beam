@@ -296,6 +296,11 @@ test('real pairing reset revokes old pages and prepared Vault content, then expl
     await page.goto(`${origin}/app/?token=browser-test-token`);
     await page.waitForFunction(() => document.getElementById('connectionStatus').textContent === 'Connected');
     await page.getByRole('tab', { name: 'Vault', exact: true }).click();
+    // Keep this security fixture independent of scroll/click timing in a growing Vault.
+    await page.getByLabel('Search vault').fill('from-pc.txt');
+    await page.waitForFunction(() => document.querySelectorAll('#vaultItems > li').length === 1 &&
+      document.getElementById('vaultItems').textContent.includes('from-pc.txt') &&
+      !document.getElementById('vaultRefresh').disabled);
     await page.getByRole('button', { name: 'Download from-pc.txt', exact: true }).click();
     const save = page.getByRole('link', { name: 'Save from-pc.txt', exact: true });
     await save.waitFor();
@@ -326,10 +331,16 @@ test('real pairing reset revokes old pages and prepared Vault content, then expl
     oldQrPage = await browser.newPage();
     await oldQrPage.goto(`${origin}/app/?token=browser-test-token`);
     await oldQrPage.locator('#setup').waitFor({ state: 'visible' });
+    await page.bringToFront();
     await page.getByLabel('PC token', { exact: true }).fill(replacement);
     await page.locator('#saveTokenButton').click();
     await page.waitForFunction(() => document.getElementById('connectionStatus').textContent === 'Connected');
     await page.getByRole('tab', { name: 'Vault', exact: true }).click();
+    // Keep this security fixture independent of scroll/click timing in a growing Vault.
+    await page.getByLabel('Search vault').fill('from-pc.txt');
+    await page.waitForFunction(() => document.querySelectorAll('#vaultItems > li').length === 1 &&
+      document.getElementById('vaultItems').textContent.includes('from-pc.txt') &&
+      !document.getElementById('vaultRefresh').disabled);
     await page.getByRole('button', { name: 'Download from-pc.txt', exact: true }).click();
     await page.getByRole('link', { name: 'Save from-pc.txt', exact: true }).waitFor();
     assert.deepEqual(await fs.readFile(path.join(directory, 'history.json')), historyBefore);
