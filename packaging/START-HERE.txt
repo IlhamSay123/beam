@@ -31,6 +31,14 @@ reloading/closing the page loses their retry IDs. Queues are not resumed after
 reload. The optional legacy Shortcut does not have safe-retry protection.
 Refresh Safari after updating the PC build to load the current retry code.
 
+RESET PAIRING
+On the PC, open Pair phone, choose Reset pairing, and confirm. Scan the new QR
+on each browser. Update any Shortcut's X-Beam-Token header from the new PC token.
+Every old browser, QR and Shortcut loses access; active transfers may stop.
+Vault files, history and receipts are kept. After re-pairing, Retry the original
+Safari upload row to check its receipt. Already copied/saved data stays on the
+phone. A reset error leaves the previous pairing working.
+
 WINDOWS CONTROLS
 Pill mode keeps a small widget on-screen. Minimize uses the taskbar.
 Hide to tray keeps Beam receiving. Close / Quit stops Beam completely after

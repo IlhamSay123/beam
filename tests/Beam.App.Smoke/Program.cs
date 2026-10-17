@@ -10,6 +10,7 @@ using Beam.App;
 using Beam.Server;
 using Beam.Server.Storage;
 using Beam.Server.Connection;
+using Beam.Server.Security;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -536,12 +537,98 @@ internal static class Program
         return stream.ToArray();
     }
 
+    private static async Task CheckPairingReset(string folder, string? screenshots)
+    {
+        var root = Path.Combine(folder, "pairing-reset");
+        var options = new BeamServerOptions(root, "smoke-reset-token", 0);
+        await using var server = BeamServerHost.Build(options);
+        await server.StartAsync();
+        var previousServer = App.ServerApp;
+        var previousOptions = App.Options;
+        var previousWindow = Application.Current.MainWindow;
+        var workspace = new Window();
+        PairingWindow? pairing = null;
+        try
+        {
+            typeof(App).GetProperty(nameof(App.ServerApp))!.SetValue(null, server);
+            typeof(App).GetProperty(nameof(App.Options))!.SetValue(null, options);
+            Application.Current.MainWindow = workspace;
+            workspace.Show();
+            var tokens = server.Services.GetRequiredService<PairingTokenStore>();
+            var index = server.Services.GetRequiredService<HistoryIndex>();
+            OutboxQueue.QueueText(index, "Synthetic note preserved by reset");
+            var port = new Uri(server.Urls.First()).Port;
+            pairing = new PairingWindow("192.168.1.22", port, tokens.CurrentToken);
+            pairing.Show();
+            var reset = pairing.FindName("ResetPairingButton") as Button;
+            var rotate = typeof(PairingWindow).GetMethod("ResetPairingAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+            Require(reset is not null && reset.IsEnabled && rotate is not null, "Pairing has no usable Reset pairing action.");
+            var firstQr = ((Image)pairing.FindName("QrImage")).Source;
+            var oldKey = tokens.CurrentToken;
+            using (var active = tokens.TryAcquire(oldKey))
+            {
+                Require(active is not null, "Fixture could not authorize a pending request.");
+                var pending = (Task)rotate!.Invoke(pairing, null)!;
+                var responsive = false;
+                await Application.Current.Dispatcher.InvokeAsync(() => responsive = true);
+                await WaitForThumbnail(() => tokens.CurrentToken != oldKey);
+                Require(responsive && !pending.IsCompleted && !reset!.IsEnabled && pairing.PairingLink is null &&
+                    ((Image)pairing.FindName("QrImage")).Source is null, "Reset blocked the dispatcher or offered old credentials while draining.");
+                var duplicate = (Task)rotate.Invoke(pairing, null)!;
+                Require(duplicate.IsCompletedSuccessfully, "Repeated reset queued another key rotation.");
+                active!.Dispose();
+                await pending;
+            }
+            var current = tokens.CurrentToken;
+            Require(current != oldKey && File.ReadAllText(Path.Combine(root, "token.txt")) == current,
+                "Reset did not persist the new key.");
+            Require(((TextBox)pairing.FindName("TokenText")).Text == current &&
+                pairing.PairingLink == $"http://192.168.1.22:{port}/app/?token={current}" &&
+                ((Image)pairing.FindName("QrImage")).Source is not null &&
+                !ReferenceEquals(((Image)pairing.FindName("QrImage")).Source, firstQr), "Token, link and QR did not rotate together on the same adapter.");
+            Require(index.List().Count == 1 && !index.List()[0].Read && reset!.IsEnabled,
+                "Reset lost history or left its control disabled.");
+            using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
+            client.DefaultRequestHeaders.Add("X-Beam-Token", oldKey);
+            using (var oldAccess = await client.GetAsync("/vault")) Require(oldAccess.StatusCode == HttpStatusCode.Unauthorized, "Old native pairing still authenticates.");
+            client.DefaultRequestHeaders.Clear(); client.DefaultRequestHeaders.Add("X-Beam-Token", current);
+            using (var newAccess = await client.GetAsync("/vault")) Require(newAccess.IsSuccessStatusCode, "New native pairing does not authenticate.");
+            if (screenshots is not null) Capture((FrameworkElement)pairing.Content, screenshots, "pairing-reset-ready.png");
+            var tokenPath = Path.Combine(root, "token.txt");
+            File.Move(tokenPath, tokenPath + ".backup");
+            Directory.CreateDirectory(tokenPath);
+            try
+            {
+                await (Task)rotate!.Invoke(pairing, null)!;
+                Require(tokens.CurrentToken == current && pairing.PairingLink!.Contains(current) && reset!.IsEnabled &&
+                    ((TextBlock)pairing.FindName("ResetStatus")).Text.Contains("Could not reset"), "Failed reset hid the working key or claimed success.");
+                if (screenshots is not null) Capture((FrameworkElement)pairing.Content, screenshots, "pairing-reset-failed.png");
+            }
+            finally { Directory.Delete(tokenPath); File.Move(tokenPath + ".backup", tokenPath); }
+            pairing.Close(); pairing = null;
+            App.ShowPairing();
+            pairing = Application.Current.Windows.OfType<PairingWindow>().Single();
+            Require(((TextBox)pairing.FindName("TokenText")).Text == current,
+                "Reopening Pair phone restored the original options token.");
+            Console.WriteLine("PASS: reset drains without blocking UI, rejects duplicates, refreshes QR/token, retains history, handles storage failure and reopens current pairing.");
+        }
+        finally
+        {
+            pairing?.Close(); workspace.Close();
+            Application.Current.MainWindow = previousWindow;
+            typeof(App).GetProperty(nameof(App.ServerApp))!.SetValue(null, previousServer);
+            typeof(App).GetProperty(nameof(App.Options))!.SetValue(null, previousOptions);
+            await server.StopAsync();
+        }
+    }
+
     [STAThread]
     private static int Main(string[] args)
     {
         var application = new SmokeApplication { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var screenshotFolder = args.Length == 2 && args[0] == "--screenshots" ? args[1] : null;
+        var screenshotIndex = Array.IndexOf(args, "--screenshots");
+        var screenshotFolder = screenshotIndex >= 0 && screenshotIndex + 1 < args.Length ? args[screenshotIndex + 1] : null;
         var connectionOnly = args.Contains("--connection-only");
         Uri? serverAddress = null;
         TrayIconService? tray = null;
@@ -558,6 +645,7 @@ internal static class Program
             try
             {
                 Directory.CreateDirectory(directory);
+                await CheckPairingReset(directory, screenshotFolder);
                 await CheckConnectionSetup(directory, screenshotFolder);
                 if (connectionOnly) { application.Shutdown(); return; }
                 CheckActivityRecognition();

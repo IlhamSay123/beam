@@ -1,12 +1,12 @@
 <Window x:Class="Beam.App.PairingWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pair Beam" Height="660" Width="700" MinWidth="600" MinHeight="560"
+        Title="Pair Beam" Height="800" Width="700" MinWidth="600" MinHeight="560"
         WindowStartupLocation="CenterScreen" Background="#141618">
     <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="BeamTheme.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="{StaticResource CanvasBrush}">
         <Grid Margin="24">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <TextBlock Text="Pair phone" FontSize="26" FontWeight="SemiBold" Margin="0,0,0,20"/>
             <Grid Grid.Row="1" Margin="0,0,0,20">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -45,7 +45,14 @@
                 <TextBlock Text="Use the same reachable local network. If Safari cannot open Beam, check VPN, router isolation and Windows private-network firewall permission. Local checks cannot verify these remote settings."
                            Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"/>
             </StackPanel>
-            <Grid Grid.Row="4">
+            <StackPanel Grid.Row="4" Margin="0,0,0,20">
+                <TextBlock Text="PAIRING ACCESS" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="Reset pairing to disconnect all browsers and Shortcuts. Your Vault and saved files stay on this PC."
+                           FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                <Button x:Name="ResetPairingButton" Content="Reset pairing" Click="ResetPairing_Click" HorizontalAlignment="Left" AutomationProperties.Name="Reset pairing"/>
+                <TextBlock x:Name="ResetStatus" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" AutomationProperties.LiveSetting="Polite"/>
+            </StackPanel>
+            <Grid Grid.Row="5">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="CheckButton" Click="Check_Click"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0"/><TextBlock Text="Check connection"/></StackPanel></Button>

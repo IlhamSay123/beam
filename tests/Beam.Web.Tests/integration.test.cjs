@@ -288,3 +288,50 @@ test('real unknown receipt retries the same ID and a fresh deliberate send remai
     for (const item of rows) assert.equal(await fs.readFile(item.FilePath, 'utf8'), 'one original payload');
   } finally { await page.close(); }
 });
+
+test('real pairing reset revokes old pages and prepared Vault content, then explicitly re-pairs without losing history', async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  let oldQrPage;
+  try {
+    await page.goto(`${origin}/app/?token=browser-test-token`);
+    await page.waitForFunction(() => document.getElementById('connectionStatus').textContent === 'Connected');
+    await page.getByRole('tab', { name: 'Vault', exact: true }).click();
+    await page.getByRole('button', { name: 'Download from-pc.txt', exact: true }).click();
+    const save = page.getByRole('link', { name: 'Save from-pc.txt', exact: true });
+    await save.waitFor();
+    const prepared = await save.getAttribute('href');
+    const historyBefore = await fs.readFile(path.join(directory, 'history.json'));
+    const replacement = await new Promise((resolve, reject) => {
+      let output = '';
+      const cleanup = () => { clearTimeout(timeout); child.stdout.off('data', onData); child.off('exit', onExit); };
+      const onData = chunk => {
+        output += chunk;
+        const match = output.match(/BEAM_TEST_ROTATED=([A-Za-z0-9_-]+)/);
+        if (match) { cleanup(); resolve(match[1]); }
+      };
+      const onExit = () => { cleanup(); reject(new Error('Fixture exited before pairing reset completed.')); };
+      const timeout = setTimeout(() => { cleanup(); reject(new Error('Fixture pairing reset timed out.')); }, 5000);
+      child.stdout.on('data', onData); child.once('exit', onExit);
+      child.stdin.write('rotate\n');
+    });
+    assert.notEqual(replacement, 'browser-test-token');
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await page.locator('#setup').waitFor({ state: 'visible' });
+    assert.equal(await page.evaluate(() => localStorage.getItem('beam-token')), null);
+    assert.equal(await page.locator('#vaultItems').innerText(), '');
+    assert.equal(await page.locator('#items').innerText(), '');
+    assert.equal(await page.evaluate(async url => { try { await fetch(url); return true; } catch { return false; } }, prepared), false);
+    const oldAccess = await fetch(origin + '/vault', { headers: { 'X-Beam-Token': 'browser-test-token' } });
+    assert.equal(oldAccess.status, 401);
+    oldQrPage = await browser.newPage();
+    await oldQrPage.goto(`${origin}/app/?token=browser-test-token`);
+    await oldQrPage.locator('#setup').waitFor({ state: 'visible' });
+    await page.getByLabel('PC token', { exact: true }).fill(replacement);
+    await page.locator('#saveTokenButton').click();
+    await page.waitForFunction(() => document.getElementById('connectionStatus').textContent === 'Connected');
+    await page.getByRole('tab', { name: 'Vault', exact: true }).click();
+    await page.getByRole('button', { name: 'Download from-pc.txt', exact: true }).click();
+    await page.getByRole('link', { name: 'Save from-pc.txt', exact: true }).waitFor();
+    assert.deepEqual(await fs.readFile(path.join(directory, 'history.json')), historyBefore);
+  } finally { await oldQrPage?.close(); await page.close(); }
+});

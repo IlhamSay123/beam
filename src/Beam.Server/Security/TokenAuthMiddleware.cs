@@ -1,37 +1,29 @@
 namespace Beam.Server.Security;
 
-public class TokenAuthMiddleware
+public class TokenAuthMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public TokenAuthMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
-    public async Task InvokeAsync(HttpContext context, BeamServerOptions options, ILogger<TokenAuthMiddleware> logger)
+    public async Task InvokeAsync(HttpContext context, PairingTokenStore tokens, ILogger<TokenAuthMiddleware> logger)
     {
         var path = context.Request.Path;
         if (path == "/" || path.StartsWithSegments("/app"))
         {
-            await _next(context);
+            await next(context);
             return;
         }
-
-        if (!context.Request.Headers.TryGetValue("X-Beam-Token", out var provided) ||
-            provided.Count == 0 ||
-            provided[0] != options.ExpectedToken)
+        context.Response.Headers.CacheControl = "no-store";
+        var provided = context.Request.Headers["X-Beam-Token"];
+        using var lease = provided.Count == 1 ? tokens.TryAcquire(provided[0]) : null;
+        if (lease is null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            var detail = provided.Count == 0
-                ? "X-Beam-Token header was not received."
-                : $"X-Beam-Token received {provided.Count} value(s), {provided[0]?.Length ?? 0} character(s), but did not match.";
-            logger.LogWarning("Authentication rejected for {Method} {Path} from {RemoteIp}: {Detail}",
-                context.Request.Method, path, context.Connection.RemoteIpAddress, detail);
-            await context.Response.WriteAsync($"Invalid or missing token. {detail}");
+            logger.LogWarning("Authentication rejected for {Method} {Path} from {RemoteIp}.",
+                context.Request.Method, path, context.Connection.RemoteIpAddress);
+            await context.Response.WriteAsync("Invalid or missing token. Pair again with the PC.");
             return;
         }
-
-        await _next(context);
+        // Revocation aborts real transfers and waits for this handler's lease.
+        using var revoked = lease.Revoked.Register(static state => ((HttpContext)state!).Abort(), context);
+        lease.Revoked.ThrowIfCancellationRequested();
+        await next(context);
     }
 }

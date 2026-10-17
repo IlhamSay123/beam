@@ -32,6 +32,10 @@ public static class BeamServerHost
             builder.WebHost.UseUrls($"http://0.0.0.0:{options.Port}");
         }
 
+        // Request-start/finish messages include query strings, including QR secrets.
+        // Keep framework warnings/errors and our redacted authentication diagnostics.
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+
         builder.WebHost.ConfigureKestrel(server =>
             server.Limits.MaxRequestBodySize = options.MaxRequestBodyBytes);
         builder.Services.Configure<FormOptions>(form =>
@@ -42,6 +46,7 @@ public static class BeamServerHost
 
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton<ConnectionPresence>();
+        builder.Services.AddSingleton<PairingTokenStore>();
         builder.Services.AddSingleton<ReceiveCoordinator>();
         builder.Services.AddSingleton(new HistoryIndex(Path.Combine(options.DataDirectory, "history.json")));
         builder.Services.AddSingleton(new ItemStore(options.DataDirectory));

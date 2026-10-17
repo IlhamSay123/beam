@@ -24,8 +24,8 @@ Extract the whole ZIP, open Beam.App.exe, and follow START-HERE.txt. No SDK or
 .NET installation is required. This remains an unsigned trusted-LAN alpha.
 
 Current source targets .NET 10. The downloadable alpha.1 ZIP still bundles .NET 8.
-Phone Vault, file-type motion, connection/setup polish, safe Safari retries and
-the runtime/dependency upgrades are newer source changes awaiting a new release.
+Phone Vault, file-type motion, connection/setup polish, safe Safari retries,
+pairing reset/token rotation and the runtime/dependency upgrades are newer source changes awaiting a new release.
 
 <img src="docs/assets/beam-safari-send.png" alt="Beam Safari uploads with per-file confirmation" width="350" />
 
@@ -40,7 +40,7 @@ the runtime/dependency upgrades are newer source changes awaiting a new release.
 | Desktop workspace | Resizable Transfer and Vault views, file picker, drag-and-drop, queue feedback, and arrival animations. |
 | Compact widget | Draggable, always-on-top 164 x 48 pill with directional file-type motion, status feedback, file drops, expansion, and a context menu. |
 | Vault | Both directions on phone and desktop. Safari supports search, direction/type filters, image/note previews and repeat copy/download; desktop adds sorting, open, reveal, and resend. |
-| Pairing | First-run setup, refreshable adapter/address selection, QR browser pairing, copyable token/link, local checks and redacted diagnostics. |
+| Pairing | First-run setup, refreshable adapter/address selection, QR browser pairing, copyable token/link, confirmed reset/token rotation, local checks and redacted diagnostics. |
 | Connection status | Recent authenticated remote-browser activity and last-seen on Windows; visible retry and foreground reconnection in Safari. |
 | Persistence | Inbox, outbox, notes, and acknowledgement state survive app restarts. Records no longer expire automatically. |
 | Error handling | Missing files, invalid tokens, network failures, empty uploads, and failed acknowledgements are surfaced. |
@@ -133,6 +133,18 @@ after an IP change, a fresh QR scan may still be necessary.
 To send from the phone, open **Send**, choose files/photos, or enter a note/link.
 See the [Safari guide](docs/setup/safari-setup.md). The
 [Share Sheet Shortcut](docs/setup/ios-shortcut-setup.md) is an optional convenience.
+
+### Reset Pairing
+
+On the PC, open **Pair phone**, choose **Reset pairing**, and confirm. Beam saves
+a new random token and replaces the QR/link. Every previously paired browser,
+old QR and optional Shortcut loses access. Scan the new QR on each browser and
+update each Shortcut's `X-Beam-Token` header with the new PC token.
+
+Active transfers may be interrupted. Vault files, history, queued items and
+safe-retry receipts are kept. After re-pairing, use Retry on the original Safari
+upload row to check its receipt. A write failure leaves the existing pairing
+working and displays an error. Reset cannot recall data already copied or saved.
 
 ### Windows Alpha Package
 
@@ -319,7 +331,7 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 - The pairing token is a shared bearer secret, stored in plain text on the PC
   and in browser local storage. QR pairing links also contain it.
 - Anyone with network access and the token can use the protected endpoints.
-  There is no per-device identity, expiry, device-revocation UI, or rate limiting.
+  Reset pairing revokes everyone at once; per-device identity/revocation, expiry and rate limiting are not available.
 - Default uploads are capped at 100 MiB per file and notes at 64 KiB UTF-8;
   uploads are not chunk-resumable. Queues and retry IDs do not survive page reloads.
   Use Retry on the existing Safari upload row; reselecting a file or clearing the
@@ -339,7 +351,7 @@ Native tray/desktop smoke tests remain a local Windows check. Read the
 - Durable phone queues and chunk-resumable large transfers (current retries reuse whole retained files).
 - Favorites/pinning and optional storage cleanup controls.
 - Better network diagnostics and device connection visibility.
-- Encrypted transport, token rotation, and device-specific authorization.
+- Encrypted transport, expiring credentials and device-specific authorization.
 - Signed installer, Windows startup integration, and release packaging.
 
 ## Project Status and License

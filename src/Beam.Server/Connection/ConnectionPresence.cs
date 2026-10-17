@@ -25,6 +25,11 @@ public sealed class ConnectionPresence(TimeProvider? clock = null)
         }
     }
 
+    public void Clear()
+    {
+        lock (_gate) { _sessions.Clear(); _lastSeenUtc = null; }
+    }
+
     public ConnectionSnapshot Snapshot()
     {
         lock (_gate)

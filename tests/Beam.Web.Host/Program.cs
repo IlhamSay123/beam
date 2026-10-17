@@ -1,5 +1,6 @@
 using Beam.Server;
 using Beam.Server.Storage;
+using Beam.Server.Security;
 
 // Isolated integration fixture: no desktop, real user data, or production token.
 var directory = args.Single();
@@ -13,5 +14,13 @@ OutboxQueue.QueueFile(index, store, sample);
 OutboxQueue.QueueText(index, "Note from the PC");
 await app.StartAsync();
 Console.WriteLine("BEAM_TEST_URL=" + app.Urls.Single());
-await Console.In.ReadLineAsync();
+while (await Console.In.ReadLineAsync() is { } command && command != "stop")
+{
+    if (command == "rotate")
+    {
+        // Private test-process control, never an HTTP route or production token.
+        var token = await app.Services.GetRequiredService<PairingTokenStore>().RotateAsync();
+        Console.WriteLine("BEAM_TEST_ROTATED=" + token);
+    }
+}
 await app.StopAsync();

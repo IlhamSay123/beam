@@ -25,6 +25,20 @@ own server; it cannot verify the phone's route or identify a router/firewall rul
 Copied diagnostics omit the token, pairing link and private transfer contents,
 but include the selected local IP and port. Review them before sharing.
 
+## Reset and Re-pair
+
+On Windows, open Pair phone, choose Reset pairing, and confirm. This replaces the
+shared token and QR, disconnecting every old browser and optional Shortcut.
+Active transfers may be interrupted. Scan the new QR to pair each browser again;
+update each Shortcut's X-Beam-Token header from the new PC token.
+
+Beam keeps Vault files, history and saved receipts. After re-pairing, use Retry
+on an interrupted upload's original Safari row to check its receipt before
+resending. Uploads do not resume automatically. Reloading/reselecting a file loses
+that row's retry identity. Old pages clear protected content on their next 401;
+data already copied or saved on a phone cannot be recalled. If Windows reports a
+reset failure, the previous pairing remains active and can be retried.
+
 ## Phone to PC
 
 1. Open Send.

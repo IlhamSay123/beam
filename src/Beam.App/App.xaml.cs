@@ -2,6 +2,7 @@ using System.Windows;
 using Beam.Server;
 using Beam.Server.Security;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Beam.App;
 
@@ -65,11 +66,12 @@ public partial class App : Application
         if (_pairingWindow is not null)
         {
             if (_pairingWindow.WindowState == WindowState.Minimized) _pairingWindow.WindowState = WindowState.Normal;
+            _pairingWindow.RefreshPairing();
             _pairingWindow.Show();
             _pairingWindow.Activate();
             return;
         }
-        _pairingWindow = new PairingWindow(Options.Port, Options.ExpectedToken) { Owner = owner };
+        _pairingWindow = new PairingWindow(Options.Port, ServerApp.Services.GetRequiredService<PairingTokenStore>().CurrentToken) { Owner = owner };
         _pairingWindow.Closed += (_, _) => _pairingWindow = null;
         _pairingWindow.Show();
     }

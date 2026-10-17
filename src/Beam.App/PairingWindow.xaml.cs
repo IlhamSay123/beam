@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Beam.Server.Connection;
+using Beam.Server.Security;
 using Microsoft.Extensions.DependencyInjection;
 using QRCoder;
 
@@ -10,11 +11,13 @@ namespace Beam.App;
 
 public partial class PairingWindow : Window
 {
-    private readonly string _token;
+    private string _token;
     private readonly int _port;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly ConnectionPresence? _presence;
+    private readonly PairingTokenStore? _tokens;
+    private bool _resetting;
     private bool _refreshing;
     private bool _checking;
     private bool _closed;
@@ -30,9 +33,10 @@ public partial class PairingWindow : Window
         _token = token;
         _port = port;
         _presence = App.ServerApp?.Services.GetService<ConnectionPresence>();
+        _tokens = App.ServerApp?.Services.GetService<PairingTokenStore>();
         TokenText.Text = token;
         Width = Math.Min(700, SystemParameters.WorkArea.Width);
-        Height = Math.Min(660, SystemParameters.WorkArea.Height);
+        Height = Math.Min(800, SystemParameters.WorkArea.Height);
         MinWidth = Math.Min(600, Width);
         MinHeight = Math.Min(560, Height);
         if (hostname is not null && NetworkSetup.IsLanAddress(hostname))
@@ -44,7 +48,7 @@ public partial class PairingWindow : Window
             await CheckLocalAsync();
             if (!_closed) _timer.Start();
         };
-        _timer.Tick += async (_, _) => { UpdatePresence(); await RefreshFromSystemAsync(); };
+        _timer.Tick += async (_, _) => { RenderAddress(); await RefreshFromSystemAsync(); };
         Closed += (_, _) => { _closed = true; _timer.Stop(); _lifetime.Cancel(); };
     }
 
@@ -54,7 +58,7 @@ public partial class PairingWindow : Window
         var usable = NetworkSetup.Filter(adapters);
         if (AdapterSelector.ItemsSource is IEnumerable<SetupAdapter> current && current.SequenceEqual(usable))
         {
-            UpdatePresence();
+            RenderAddress();
             return;
         }
         var next = NetworkSetup.Select(usable, selected?.Key);
@@ -80,18 +84,27 @@ public partial class PairingWindow : Window
 
     private void RenderAddress()
     {
+        var busy = _resetting || _tokens?.IsRotating == true;
+        ResetPairingButton.IsEnabled = _tokens is not null && !busy;
+        if (!busy && _tokens is not null && _token != _tokens.CurrentToken)
+        {
+            _token = _tokens.CurrentToken;
+            ResetStatus.Text = "Pairing reset. Scan the new QR on each phone, and update any Shortcuts.";
+        }
+        TokenText.Text = busy ? "" : _token;
         var adapter = AdapterSelector.SelectedItem as SetupAdapter;
         var address = adapter is null ? null : $"http://{adapter.Address}:{_port}/app/";
         HostText.Text = address ?? "No active LAN IPv4 address";
-        PairingLink = address is null ? null : $"{address}?token={Uri.EscapeDataString(_token)}";
-        CopyLinkButton.IsEnabled = CopyAddressButton.IsEnabled = CopyTokenButton.IsEnabled = adapter is not null;
-        QrBorder.Visibility = adapter is null ? Visibility.Collapsed : Visibility.Visible;
-        OfflineText.Visibility = adapter is null ? Visibility.Visible : Visibility.Collapsed;
+        PairingLink = address is null || busy ? null : $"{address}?token={Uri.EscapeDataString(_token)}";
+        CopyLinkButton.IsEnabled = CopyAddressButton.IsEnabled = CopyTokenButton.IsEnabled = adapter is not null && !busy;
+        QrBorder.Visibility = adapter is null || busy ? Visibility.Collapsed : Visibility.Visible;
+        OfflineText.Visibility = adapter is null || busy ? Visibility.Visible : Visibility.Collapsed;
+        OfflineText.Text = busy ? "Resetting pairing..." : "No active LAN IPv4 address";
         AdapterStatus.Text = adapter is null ? "LAN adapter unavailable. Connect to Wi-Fi or Ethernet, then refresh." : $"Selected LAN IPv4: {adapter.Address}";
-        if (_qrKey != adapter?.Key)
+        if (_qrKey != PairingLink)
         {
             QrImage.Source = null;
-            _qrKey = adapter?.Key;
+            _qrKey = PairingLink;
             if (PairingLink is not null)
             {
                 using var generator = new QRCodeGenerator();
@@ -137,6 +150,39 @@ public partial class PairingWindow : Window
     }
 
     private void Adapter_Changed(object sender, SelectionChangedEventArgs e) => RenderAddress();
+    public void RefreshPairing() => RenderAddress();
+
+    private async void ResetPairing_Click(object sender, RoutedEventArgs e)
+    {
+        if (_closed || _resetting || _tokens is null || _tokens.IsRotating) return;
+        var answer = MessageBox.Show(this,
+            "Disconnect every paired browser and Shortcut? Active transfers may be interrupted. Your Vault and saved files will be kept. Scan the new QR to pair again.",
+            "Reset pairing", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (answer == MessageBoxResult.Yes) await ResetPairingAsync();
+    }
+
+    private async Task ResetPairingAsync()
+    {
+        if (_closed || _resetting || _tokens is null || _tokens.IsRotating) return;
+        _resetting = true;
+        ResetStatus.Text = "Resetting pairing. Stopping active transfers...";
+        RenderAddress();
+        try
+        {
+            await _tokens.RotateAsync();
+            if (!_closed) ResetStatus.Text = "Pairing reset. Scan the new QR on each phone, and update any Shortcuts.";
+        }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
+        {
+            if (!_closed) ResetStatus.Text = "Could not reset pairing. The current pairing is unchanged. Check that Beam can write to its data folder, then try again.";
+        }
+        finally
+        {
+            _resetting = false;
+            if (!_closed) RenderAddress();
+        }
+    }
+
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshFromSystemAsync();
     private async void Check_Click(object sender, RoutedEventArgs e) { await RefreshFromSystemAsync(); await CheckLocalAsync(); }
     private void Later_Click(object sender, RoutedEventArgs e) => Close();

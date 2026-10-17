@@ -2,6 +2,16 @@
 
 ## Current snapshot: 2026-10-17
 
+The pairing-security milestone adds a confirmed PC-only reset. A new random key
+is persisted atomically before activation; old authenticated requests are
+cancelled/drained before success, old QR/browser/Shortcut keys are rejected, and
+presence is cleared. Vault files/history, pending items and safe-retry receipts
+remain intact. Failed token replacement preserves the current pairing. The
+desktop hides QR/copy controls while resetting and reloads current credentials
+when reopened. ASP.NET query-bearing request logs are suppressed; a captured-log
+regression covers both original and replacement QR tokens. This remains shared
+bearer authentication over trusted-LAN HTTP, without per-device identity/expiry.
+
 The .NET 10 source milestone targets all five projects and both GitHub workflows
 at .NET 10. Local verification uses Microsoft SDK 10.0.402 and runtime 10.0.13.
 The mDNS dependency graph promotes IPNetwork2 to compatible 2.6.618; xUnit remains
@@ -33,9 +43,17 @@ heartbeats, global error/retry controls and foreground recovery with stale-reque
 protection. It preserves the previous Vault/motion milestone.
 
 The Release solution builds without warnings or errors. The backend suite has
-192 passing checks. All 92 browser checks pass in Chromium and all 92 in WebKit
-with serialized browser fixtures, including ten real-server integration checks.
-These cover malformed/oversized
+199 passing checks. All 93 browser checks pass in Chromium and all 93 in WebKit
+with serialized browser fixtures, including nine real-server integration checks.
+Pairing regressions cover repeated raw token headers, old/new authorization,
+clean-restart persistence, failed writes/recovery, concurrent rotation, handler
+revocation/drain and QR-secret logging. The native harness verifies responsive
+reset, current QR/token/link, duplicate-action suppression, preserved data,
+failure feedback and reopening with the live key. The real-browser reset case
+revokes prepared Vault blobs, rejects the old QR, explicitly re-pairs, and checks
+unchanged history.
+
+The wider suite covers malformed/oversized
 heartbeats, authentication, time expiry, inactive/local-browser suppression,
 stale token races, retry, original file bytes, retained downloads/history,
 thumbnails, responsive states, reduced motion and trail bounds. Retry coverage
@@ -72,8 +90,8 @@ a duplicate. The occupied-port case intentionally logs a failed bind; the smoke
 harness's zero exit code and PASS result determine success for that case.
 
 The user smoke-tested the phone Vault/motion interface and reported it working,
-including opening a photo and saving it into Photos. The new connection/setup
-and safe-retry flows still need physical-iPhone acceptance testing. WebKit automation is engine
+including opening a photo and saving it into Photos. The new connection/setup,
+safe-retry and pairing-reset flows still need physical-iPhone acceptance testing. WebKit automation is engine
 coverage, not proof of every iOS picker, memory limit or save-sheet behavior.
 Use [Safari setup](safari-setup.md) next.
 
@@ -84,6 +102,13 @@ case, Windows toast configuration, or mixed-DPI monitor arrangement.
 
 The dated continuation notes below are historical checkpoints. Their test
 counts and statements about uncommitted work are not the current release status.
+
+A local 0.1.0-alpha.2.preview.2 package verifies the pairing-reset milestone with
+the three .NET 10.0.13 runtimes, matching browser/setup assets, no personal data,
+a clean dependency manifest and a verified SHA-256 checksum. It is not a published
+release. Independent security review found a QR query logging gap; a regression
+reproduced it before the category-filter fix and passes afterward. Follow-up
+review found no further issues.
 
 ## Automated checks
 
@@ -156,6 +181,10 @@ Beam.App.exe. Open Pair phone or the tray menu's Pair Phone and follow
 - [ ] Reduced motion works in iOS and Windows; the pill stays 164 x 48 without overlaps.
 - [ ] Unreachable PC shows a connection error and browser polling recovers.
 - [ ] Wrong token returns 401 without saving input; browser shows setup.
+- [ ] Cancel the Reset pairing confirmation: current token and phone access stay unchanged.
+- [ ] Confirm Reset pairing: QR/token/link change; old pages, QR links and Shortcuts lose access. Active transfers stop or finish before reset reports success.
+- [ ] Scan the new QR/update Shortcut headers: access returns; Vault files/history and receipts remain. Retry an interrupted Safari upload's original row without creating a duplicate.
+- [ ] Restart Beam after reset: the new key still works and the old key is rejected.
 - [ ] PC restart retains received history and queued/acknowledged items.
 - [ ] Private-network firewall permission permits phone access.
 

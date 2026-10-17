@@ -1,4 +1,5 @@
 using Beam.Server;
+using Beam.Server.Connection;
 using Beam.Server.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +16,8 @@ public class TokenAuthMiddlewareTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton<ConnectionPresence>();
+        builder.Services.AddSingleton<PairingTokenStore>();
         var app = builder.Build();
         app.UseMiddleware<TokenAuthMiddleware>();
         app.MapGet("/protected", () => "ok");
@@ -52,7 +55,7 @@ public class TokenAuthMiddlewareTests
             var response = await client.GetAsync("/protected");
             Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("received 1 value(s), 5 character(s)", body);
+            Assert.Contains("Pair again with the PC", body);
             Assert.DoesNotContain("secret123", body);
             Assert.DoesNotContain("wrong", body);
         }
@@ -70,7 +73,7 @@ public class TokenAuthMiddlewareTests
         {
             var response = await client.GetAsync("/protected");
             Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
-            Assert.Contains("X-Beam-Token header was not received", await response.Content.ReadAsStringAsync());
+            Assert.Contains("Invalid or missing token", await response.Content.ReadAsStringAsync());
         }
         finally
         {

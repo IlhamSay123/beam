@@ -22,6 +22,27 @@ with X-Beam-Token. It uses HTTP and does not encrypt data at rest. Browser local
 storage and the PC token file hold the same bearer secret. Protect the Windows
 account and local network, and do not forward the port through a router.
 
+## Reset Pairing
+
+The Windows Pair phone window offers a confirmed Reset pairing action. It creates
+a cryptographic random shared key, atomically replaces token.txt before activating
+it, cancels old authenticated requests, and waits for their handlers to leave
+before reporting success. Protected requests are rejected while those handlers
+drain. There is no HTTP reset endpoint. A token-file replacement failure leaves
+the previous key active.
+
+Reset invalidates all old browser tokens, QR links and Shortcut headers together.
+Browsers clear old Receive/Vault content and prepared download URLs when they
+next receive 401; they must explicitly pair again. The PC keeps files, history,
+acknowledgements and safe-retry receipts. Already copied or downloaded data cannot
+be recalled. Re-pairing does not automatically resend interrupted uploads.
+
+Beam suppresses query-bearing ASP.NET request-start/finish logs and keeps its
+authentication errors free of token values. QR links remain sensitive: HTTP,
+browser storage, clipboard copies and the PC token file retain the existing
+trusted-LAN security boundaries. There is no individual-device revocation,
+automatic token expiry, or encrypted transport.
+
 ## Reporting
 
 Report vulnerabilities privately to the repository owner rather than publishing
