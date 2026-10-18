@@ -42,3 +42,13 @@ steps, expected/actual results, platform versions, and any remaining test gaps.
 
 Historical design notes under docs/superpowers may describe earlier behavior.
 Current code, README, and docs/setup describe the implemented workflow.
+
+## Screenshot updates
+
+Use the isolated native and browser demo capture commands in
+[docs/assets/README.md](docs/assets/README.md). Review the rendered images before
+publishing. Keep phone captures labelled as browser-engine captures, and use
+generated data instead of real transfers or pairing credentials.
+
+For bug reports, include Windows and phone/browser versions, reproduction
+steps, expected/actual behaviour and redacted diagnostics where useful.

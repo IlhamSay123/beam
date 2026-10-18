@@ -12,8 +12,8 @@ Never commit or attach:
 - Inbox/Outbox files, private note contents, or unredacted diagnostic logs.
 - Screenshots that reveal tokens, filenames, local paths, or private transfers.
 
-Use synthetic files and replace tokens with placeholders in examples. A private
-GitHub repository does not make it a safe place to store live credentials.
+Use synthetic files and replace tokens with placeholders in examples. Keep live
+credentials and personal transfers out of Git, including historical commits.
 
 ## Boundaries
 

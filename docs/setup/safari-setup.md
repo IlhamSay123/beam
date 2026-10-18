@@ -4,7 +4,7 @@ No App Store app or Shortcut is needed for this workflow.
 
 ## First Connection
 
-1. Extract the Windows ZIP and open Beam.App.exe. Keep the publish files together.
+1. Run the Windows Setup installer, or extract the complete ZIP and open Beam.App.exe.
 2. Allow the app on your trusted private network if Windows asks.
 3. Connect the iPhone and PC to a network that allows them to reach each other.
 4. Pairing opens on Beam's first launch; on later launches, click Pair phone.

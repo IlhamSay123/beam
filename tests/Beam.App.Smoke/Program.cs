@@ -510,7 +510,8 @@ internal static class Program
         bitmap.Render(view);
         var pixels = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4];
         bitmap.CopyPixels(pixels, bitmap.PixelWidth * 4, 0);
-        Require(pixels.Where((_, i) => i % 4 != 3).Distinct().Count() > 20, "Rendered UI is blank.");
+        // Native context menus use a small grayscale palette; colored workspace views need more variation.
+        Require(pixels.Where((_, i) => i % 4 != 3).Distinct().Count() > (view is ContextMenu ? 2 : 20), "Rendered UI is blank.");
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         Directory.CreateDirectory(folder);
@@ -823,7 +824,19 @@ internal static class Program
                 Require(window.IsPillMode && window.Width == 164 && window.Height == 48 && !window.ShowInTaskbar, "Pill geometry failed.");
                 await Task.Delay(150);
                 CheckPillTextBounds(window);
-                if (screenshotFolder is not null) Capture((FrameworkElement)window.Content, screenshotFolder, "beam-pill.png");
+                if (screenshotFolder is not null)
+                {
+                    Capture((FrameworkElement)window.Content, screenshotFolder, "beam-pill.png");
+                    var menu = ((FrameworkElement)window.FindName("PillRoot")).ContextMenu;
+                    menu.PlacementTarget = (UIElement)window.FindName("PillRoot");
+                    menu.IsOpen = true;
+                    try
+                    {
+                        await Task.Delay(100);
+                        Capture(menu, screenshotFolder, "beam-startup-menu.png");
+                    }
+                    finally { menu.IsOpen = false; }
+                }
                 window.OpenWorkspace();
                 Require(!window.IsPillMode && window.Width == 780 && window.Height == 600 && window.ShowInTaskbar, "Workspace restore failed.");
                 Click(window, "MinimizeButton");
